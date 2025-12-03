@@ -6,11 +6,12 @@
   <title>Private — Mood Booster</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#ffecec;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-    .box{background:#fff;padding:24px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);width:320px;text-align:center}
+    .box{background:#fff;padding:24px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);width:360px;text-align:center}
     input{width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ddd}
     button{padding:10px 14px;border-radius:8px;border:none;background:#ff69b4;color:#fff;font-weight:700;cursor:pointer}
     .hint{font-size:13px;color:#666;margin-top:8px}
     #err{color:#c0392b;display:none;margin-top:8px}
+    .row { display:flex; align-items:center; gap:8px; justify-content:flex-start; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -18,17 +19,22 @@
     <h2>Private Access</h2>
     <p>Masukkan kata laluan untuk akses.</p>
     <input id="pw" type="password" placeholder="Kata laluan" autocomplete="current-password" />
+    <div class="row">
+      <input id="remember" type="checkbox" />
+      <label for="remember" style="font-size:14px">Ingat saya pada komputer ini</label>
+    </div>
     <button id="go">Buka</button>
     <div id="err">Kata laluan salah.</div>
-    <div class="hint">Pass:Birthday Cinta Hati</div>
+    <div class="hint">Jika BF anda login sekali dan tick "Ingat saya", dia tidak perlu login lagi.</div>
   </div>
 
 <script>
   // ----- CONFIG -----
-  // GANTIKAN nilai di bawah dengan SHA-256 hex output yang awak dapat dari langkah Console
+  // Masukkan SHA-256 hex password anda di sini
   const PASSWORD_HASH = "730597cd3edb1378500e15b712ae2708ee938f5fb57278113d843fa20b3dd38c";
   const TOKEN_KEY = 'mood_booster_auth_v1';
-  const TOKEN_VALID_MS = 1000 * 60 * 60 * 24 * 7; // token sah 7 hari (ubah jika perlu)
+  // default expiry (ms) for non-remembered tokens (7 days)
+  const DEFAULT_EXPIRY_MS = 1000*60*60*24*7;
 
   async function sha256Hex(str){
     const enc = new TextEncoder();
@@ -38,13 +44,35 @@
     return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
   }
 
+  // Save token. If remember=true -> persistent token with "perm" flag
+  function saveToken(remember){
+    const ts = Date.now();
+    if (remember) {
+      // store perm token: 'ok:ts:perm'
+      localStorage.setItem(TOKEN_KEY, `ok:${ts}:perm`);
+    } else {
+      // store expiring token: 'ok:ts'
+      localStorage.setItem(TOKEN_KEY, `ok:${ts}`);
+    }
+  }
+
+  // check token validity helper (used on gate and index)
+  function isTokenValid(raw){
+    if (!raw) return false;
+    const parts = raw.split(':');
+    if (parts[0] !== 'ok') return false;
+    // perm token stays valid until removed
+    if (parts[2] === 'perm') return true;
+    const ts = parseInt(parts[1]) || 0;
+    return (Date.now() - ts) < DEFAULT_EXPIRY_MS;
+  }
+
   document.getElementById('go').addEventListener('click', async ()=>{
     const pw = document.getElementById('pw').value || '';
+    const remember = document.getElementById('remember').checked;
     const h = await sha256Hex(pw);
     if (h === PASSWORD_HASH){
-      // simpan token ringkas: 'ok:timestamp'
-      localStorage.setItem(TOKEN_KEY, 'ok:' + Date.now());
-      // redirect ke laman protected
+      saveToken(remember);
       location.href = 'index.html';
     } else {
       const e = document.getElementById('err');
@@ -53,22 +81,15 @@
     }
   });
 
-  // jika ada token sah terus ke index
-  (async function checkToken(){
-    const t = localStorage.getItem(TOKEN_KEY);
-    if (!t) return;
-    const parts = (t+'').split(':');
-    if (parts[0] === 'ok'){
-      const ts = parseInt(parts[1]) || 0;
-      if ((Date.now() - ts) < TOKEN_VALID_MS){
+  // auto-redirect if already have valid token
+  (function checkToken(){
+    try {
+      const raw = localStorage.getItem(TOKEN_KEY);
+      if (isTokenValid(raw)) {
         location.replace('index.html');
-      } else {
-        localStorage.removeItem(TOKEN_KEY);
       }
-    }
+    } catch(e){}
   })();
 </script>
 </body>
 </html>
-
-
