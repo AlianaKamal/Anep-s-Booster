@@ -130,6 +130,31 @@
 </head>
 <body>
 
+    <!-- START: Client-side gate check - paste at very top of index.html (before other scripts) -->
+<script>
+  (function(){
+    try {
+      const TOKEN_KEY = 'mood_booster_auth_v1';
+      const t = localStorage.getItem(TOKEN_KEY);
+      if (!t) {
+        location.replace('gate.html');
+        return;
+      }
+      const parts = (t+'').split(':');
+      const ts = parseInt(parts[1]) || 0;
+      // same expiry as gate (7 days) - keep in sync with gate.html if you change it
+      if (!(parts[0] === 'ok' && (Date.now() - ts < 1000*60*60*24*7))) {
+        localStorage.removeItem(TOKEN_KEY);
+        location.replace('gate.html');
+      }
+    } catch(e){
+      location.replace('gate.html');
+    }
+  })();
+</script>
+<!-- END: Client-side gate check -->
+
+
   <!-- small theme toggle -->
   <button id="themeToggle" aria-label="Toggle theme">🌙</button>
 
@@ -572,3 +597,4 @@
 
 </body>
 </html>
+
