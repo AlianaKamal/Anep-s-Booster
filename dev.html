@@ -116,7 +116,7 @@ canvas{pointer-events:none}
       <button id="importStable">Import stable → Dev</button>
       <button id="promoteStable" style="background:#7bd389">Promote Dev → Stable</button>
       <button id="resetDev" style="background:#ff9aa2">Reset Dev State</button>
-      <div style="font-weight:700;margin-top:8px;font-size:13px">Logs</div>
+      <div style="font-weight:700;margin-top:8px;font-size:13px">Logs (user actions from stable)</div>
       <div id="log">(aksi penting akan muncul di sini)</div>
     </div>
   </div>
@@ -181,29 +181,19 @@ changeImage('ratna_normal.png');
 </script>
 
 <script>
-/* Integration: dev persistence + SFX + heart/food/sparkles + MINIMAL LOG */
+/* Integration: dev persistence + SFX + heart/food/sparkles + MINIMAL LOG (only from index.html) */
 (function(){
   const STORAGE_KEY = 'petState_dev';
   const STABLE_KEY  = 'petState_stable';
+  const LOG_KEY     = 'dev_userActionLogs';   // where we store displayable minimal logs
+  const SOURCE_KEY  = 'pet_lastAction';       // stable writes this key on user actions
+  const KEEP_MS     = 12 * 60 * 60 * 1000;    // 12 hours retention
   const logBox = document.getElementById('log');
-
-  function logEvent(msg){
-    const time = new Date().toLocaleTimeString();
-    const line = `${time} — ${msg}`;
-    if (logBox.textContent.trim() === '(aksi penting akan muncul di sini)'){
-      logBox.textContent = line;
-    } else {
-      logBox.textContent = line + "\n" + logBox.textContent;
-    }
-  }
-
-  // canvas setup
+  const lastEl = document.getElementById('last-interaction');
   const confCanvas = document.getElementById('confettiCanvas');
-  const cctx = confCanvas.getContext ? confCanvas.getContext('2d') : null;
-  function resize(){ if(!cctx) return; confCanvas.width = innerWidth; confCanvas.height = innerHeight; }
-  addEventListener('resize',resize); resize();
+  const cctx = confCanvas && confCanvas.getContext ? confCanvas.getContext('2d') : null;
 
-  // audio
+  // basic audio (use same filenames)
   const sFeed = new Audio('sfxeat.mp3.wav'),
         sPet  = new Audio('sfxpurr.mp3.wav'),
         sKiss = new Audio('sfxkiss.mp3.wav');
@@ -211,111 +201,52 @@ changeImage('ratna_normal.png');
 
   function play(a){ try{ a.currentTime=0; a.play().catch(()=>{}); }catch(e){} }
 
-  // load dev state
+  // canvas resize
+  function resize(){ if(!cctx) return; confCanvas.width = innerWidth; confCanvas.height = innerHeight; }
+  addEventListener('resize', resize); resize();
+
+  // dev state load/save
   function load(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       if(!raw) return;
-      const parsed = JSON.parse(raw);
-      if(typeof parsed.health === 'number'){
-        health = parsed.health;
-        healthBar.style.width = `${health}%`;
-        healthBar.textContent = `${health}% Mood Titew`;
-      }
-      if(parsed.lastInteraction){
-        document.getElementById('last-interaction').textContent =
-          'Last: ' + new Date(parsed.lastInteraction).toLocaleString();
-      }
-      if(parsed.theme){
-        document.documentElement.setAttribute('data-theme', parsed.theme);
-      }
+      const p = JSON.parse(raw);
+      if(typeof p.health === 'number'){ health = p.health; healthBar.style.width = `${health}%`; healthBar.textContent = `${health}% Mood Titew`; }
+      if(p.lastInteraction){ lastEl.textContent = 'Last: ' + new Date(p.lastInteraction).toLocaleString(); }
+      if(p.theme){ document.documentElement.setAttribute('data-theme', p.theme); }
     }catch(e){ console.warn(e); }
   }
-
   function save(){
     try{
-      const payload = {
-        health,
-        lastInteraction: localStorage.getItem('pet_lastInteraction') || '',
-        theme: document.documentElement.getAttribute('data-theme') || 'light'
-      };
+      const payload = { health, lastInteraction: localStorage.getItem('pet_lastInteraction')||'', theme: document.documentElement.getAttribute('data-theme')||'light' };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     }catch(e){ console.warn(e); }
   }
 
   load();
 
-  // particles
+  // particle functions (same implementations as before)
   function heartBurst(x = innerWidth/2, y = innerHeight/3){
     if(!cctx) return;
-    const hearts=[];
-    const cols=['#ff4f8b','#ff8bb3','#ff6fa1','#ff2d6f'];
-    for(let i=0;i<18;i++){
-      hearts.push({x,y,vx:(Math.random()-0.5)*6,vy:-Math.random()*6-2,size:8+Math.random()*14,color:cols[Math.floor(Math.random()*cols.length)],life:50+Math.floor(Math.random()*30),rot:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.08});
-    }
-    let t=0;
-    const anim=setInterval(()=>{
-      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      hearts.forEach(h=>{
-        h.x+=h.vx; h.y+=h.vy; h.vy+=0.18; h.rot+=h.rotSpeed; h.life--;
-        const s=h.size;
-        cctx.save(); cctx.translate(h.x,h.y); cctx.rotate(h.rot);
-        cctx.fillStyle=h.color;
-        cctx.beginPath();
-        cctx.moveTo(0,-s*0.6);
-        cctx.bezierCurveTo(-s,-s*1.3,-s*1.2,s*0.2,0,s);
-        cctx.bezierCurveTo(s*1.2,s*0.2,s,-s*1.3,0,-s*0.6);
-        cctx.closePath(); cctx.fill(); cctx.restore();
-      });
-      t++; if(hearts.every(h=>h.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); }
-    },16);
+    const hearts=[]; const cols=['#ff4f8b','#ff8bb3','#ff6fa1','#ff2d6f'];
+    for(let i=0;i<18;i++) hearts.push({x,y,vx:(Math.random()-0.5)*6,vy:-Math.random()*6-2,size:8+Math.random()*14,color:cols[Math.floor(Math.random()*cols.length)],life:50+Math.floor(Math.random()*30),rot:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.08});
+    let t=0; const anim=setInterval(()=>{ cctx.clearRect(0,0,confCanvas.width,confCanvas.height); hearts.forEach(h=>{ h.x+=h.vx; h.y+=h.vy; h.vy+=0.18; h.rot+=h.rotSpeed; h.life--; const s=h.size; cctx.save(); cctx.translate(h.x,h.y); cctx.rotate(h.rot); cctx.fillStyle=h.color; cctx.beginPath(); cctx.moveTo(0,-s*0.6); cctx.bezierCurveTo(-s,-s*1.3,-s*1.2,s*0.2,0,s); cctx.bezierCurveTo(s*1.2,s*0.2,s,-s*1.3,0,-s*0.6); cctx.closePath(); cctx.fill(); cctx.restore(); }); t++; if(hearts.every(h=>h.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16);
   }
-
   function foodBurst(x=innerWidth/2,y=innerHeight/3){
     if(!cctx) return;
     const foods=["🍔","🍟","🍕"]; const parts=[];
-    for(let i=0;i<14;i++){
-      parts.push({x,y,vx:(Math.random()-0.5)*8,vy:-Math.random()*6-2,size:20+Math.random()*22,emoji:foods[Math.floor(Math.random()*foods.length)],life:40+Math.random()*30,rot:(Math.random()-0.5)*0.6});
-    }
-    let t=0;
-    const anim=setInterval(()=>{
-      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      parts.forEach(p=>{
-        p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.rot+=0.02; p.life--;
-        cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.rot);
-        cctx.font=`${p.size}px serif`; cctx.textAlign='center'; cctx.textBaseline='middle';
-        cctx.fillText(p.emoji,0,0); cctx.restore();
-      });
-      t++; if(parts.every(p=>p.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); }
-    },16);
+    for(let i=0;i<14;i++) parts.push({x,y,vx:(Math.random()-0.5)*8,vy:-Math.random()*6-2,size:20+Math.random()*22,emoji:foods[Math.floor(Math.random()*foods.length)],life:40+Math.random()*30,rot:(Math.random()-0.5)*0.6});
+    let t=0; const anim=setInterval(()=>{ cctx.clearRect(0,0,confCanvas.width,confCanvas.height); parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.rot+=0.02; p.life--; cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.rot); cctx.font=`${p.size}px serif`; cctx.textAlign='center'; cctx.textBaseline='middle'; cctx.fillText(p.emoji,0,0); cctx.restore(); }); t++; if(parts.every(p=>p.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16);
   }
-
   function sparkleBurst(x=innerWidth/2,y=innerHeight/3){
     if(!cctx) return;
     const parts=[]; const cols=['#ffffff','#ffe6f2','#ff8ccd'];
-    for(let i=0;i<28;i++){
-      parts.push({x,y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5-1,size:1+Math.random()*5,color:cols[Math.floor(Math.random()*cols.length)],life:30+Math.random()*30});
-    }
-    let t=0;
-    const anim=setInterval(()=>{
-      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      parts.forEach(p=>{
-        p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.life--;
-        const g=cctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*3);
-        g.addColorStop(0,p.color); g.addColorStop(0.6,p.color); g.addColorStop(1,'rgba(0,0,0,0)');
-        cctx.globalAlpha = Math.max(0,p.life/50);
-        cctx.fillStyle = g;
-        cctx.beginPath(); cctx.arc(p.x,p.y,p.size*2.2,0,Math.PI*2); cctx.fill();
-        cctx.globalAlpha = 1;
-      });
-      t++; if(parts.every(p=>p.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); }
-    },16);
+    for(let i=0;i<28;i++) parts.push({x,y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5-1,size:1+Math.random()*5,color:cols[Math.floor(Math.random()*cols.length)],life:30+Math.random()*30});
+    let t=0; const anim=setInterval(()=>{ cctx.clearRect(0,0,confCanvas.width,confCanvas.height); parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.life--; const g=cctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*3); g.addColorStop(0,p.color); g.addColorStop(0.6,p.color); g.addColorStop(1,'rgba(0,0,0,0)'); cctx.globalAlpha = Math.max(0,p.life/50); cctx.fillStyle = g; cctx.beginPath(); cctx.arc(p.x,p.y,p.size*2.2,0,Math.PI*2); cctx.fill(); cctx.globalAlpha = 1; }); t++; if(parts.every(p=>p.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16);
   }
 
-  // wrap original functions: add audio + particles + log minimal + save
-  const ofeed = window.feedPet.bind(window),
-        opet  = window.petPet.bind(window),
-        okiss = window.sendKiss.bind(window);
+  // wrap original functions: add audio + particles + minimal save (do NOT log dev actions)
+  const ofeed = window.feedPet.bind(window), opet = window.petPet.bind(window), okiss = window.sendKiss.bind(window);
 
   window.feedPet = function(...a){
     ofeed(...a);
@@ -324,7 +255,7 @@ changeImage('ratna_normal.png');
     foodBurst(r.left+r.width/2,r.top+r.height/2);
     localStorage.setItem('pet_lastInteraction', new Date().toISOString());
     save();
-    logEvent('feedPet() digunakan (+15)');
+    // NO dev log for local actions per user preference
   };
 
   window.petPet = function(...a){
@@ -334,7 +265,6 @@ changeImage('ratna_normal.png');
     sparkleBurst(r.left+r.width/2,r.top+r.height/2);
     localStorage.setItem('pet_lastInteraction', new Date().toISOString());
     save();
-    logEvent('petPet() digunakan (+10)');
   };
 
   window.sendKiss = function(...a){
@@ -344,20 +274,90 @@ changeImage('ratna_normal.png');
     heartBurst(r.left+r.width/2,r.top+r.height/2 - 10);
     localStorage.setItem('pet_lastInteraction', new Date().toISOString());
     save();
-    logEvent('sendKiss() digunakan (+5)');
   };
 
-  // Dev tools buttons
+  // -------------------------
+  // Minimal log: listen to pet_lastAction written by index.html (stable)
+  // -------------------------
+  function loadLogs(){
+    try {
+      const raw = localStorage.getItem(LOG_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch(e){ return []; }
+  }
+  function saveLogs(arr){
+    try { localStorage.setItem(LOG_KEY, JSON.stringify(arr)); } catch(e){}
+  }
+  function pruneLogs(arr){
+    const cutoff = Date.now() - KEEP_MS;
+    return arr.filter(en => {
+      const t = new Date(en.ts).getTime();
+      return !isNaN(t) && t >= cutoff;
+    });
+  }
+  function formatEntry(en){
+    const d = new Date(en.ts);
+    const time = d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+    const labelMap = { feedPet: 'Beri Makan', petPet: 'Pujuk', sendKiss: 'Send Kiss' };
+    const name = labelMap[en.action] || en.action;
+    const amt = (en.amount !== undefined) ? ` (+${en.amount})` : '';
+    return `${time} — ${name}${amt}`;
+  }
+  function renderLogs(){
+    const arr = pruneLogs(loadLogs());
+    saveLogs(arr);
+    if (!logBox) return;
+    const html = arr.slice().reverse().map(e => formatEntry(e)).join('\n');
+    logBox.textContent = html || '(tiada aksi user dari stable dalam 12 jam)';
+    logBox.scrollTop = 0;
+  }
+
+  function pushAction(obj){
+    if (!obj || obj.source !== 'index') return;
+    const arr = pruneLogs(loadLogs());
+    arr.push({ action: obj.action, amount: obj.amount, ts: obj.ts || new Date().toISOString() });
+    const pr = pruneLogs(arr);
+    saveLogs(pr);
+    renderLogs();
+  }
+
+  // storage event listener (fired when other tab/window writes localStorage)
+  window.addEventListener('storage', ev => {
+    try {
+      if (ev.key !== SOURCE_KEY) return;
+      if (!ev.newValue) return;
+      const obj = JSON.parse(ev.newValue);
+      pushAction(obj);
+    } catch(e){}
+  });
+
+  // On load: read last pet_lastAction and stored logs
+  (function init(){
+    try {
+      const rawLast = localStorage.getItem(SOURCE_KEY);
+      if (rawLast) {
+        const parsed = JSON.parse(rawLast);
+        if (parsed && parsed.source === 'index') pushAction(parsed);
+      }
+    } catch(e){}
+    // prune existing logs
+    const arr = pruneLogs(loadLogs());
+    saveLogs(arr);
+    renderLogs();
+  })();
+
+  // Dev control buttons (they should NOT be logged into minimal user log)
   document.getElementById('importStable').addEventListener('click', ()=>{
     try{
       const raw = localStorage.getItem(STABLE_KEY);
-      if(!raw){ alert('Tiada state stable untuk di-import.'); logEvent('Import gagal: tiada petState_stable'); return; }
+      if(!raw){ alert('Tiada state stable untuk di-import.'); return; }
       localStorage.setItem(STORAGE_KEY, raw);
       load();
       save();
       alert('State stable telah di-import ke Dev.');
-      logEvent('Import stable → Dev');
-    }catch(e){ console.warn(e); logEvent('Import stable gagal'); }
+    }catch(e){ console.warn(e); alert('Import failed'); }
   });
 
   document.getElementById('promoteStable').addEventListener('click', ()=>{
@@ -367,8 +367,7 @@ changeImage('ratna_normal.png');
         JSON.stringify({health, lastInteraction: localStorage.getItem('pet_lastInteraction')||'', theme: document.documentElement.getAttribute('data-theme')||'light'});
       localStorage.setItem(STABLE_KEY, raw);
       alert('Dev state promoted to stable.');
-      logEvent('Promote Dev → Stable');
-    }catch(e){ console.warn(e); logEvent('Promote Dev → Stable gagal'); }
+    }catch(e){ console.warn(e); alert('Promote failed'); }
   });
 
   document.getElementById('resetDev').addEventListener('click', ()=>{
@@ -379,8 +378,8 @@ changeImage('ratna_normal.png');
       health = 100;
       load();
       save();
-      logEvent('Reset Dev State');
-    }catch(e){ console.warn(e); logEvent('Reset Dev State gagal'); }
+      alert('Dev state reset.');
+    }catch(e){ console.warn(e); alert('Reset failed'); }
   });
 
   // theme toggle
@@ -389,13 +388,13 @@ changeImage('ratna_normal.png');
     const next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     save();
-    logEvent('Theme toggle: ' + next);
   });
 
-  // periodic minimal save (tanpa log)
+  // periodic save for dev
   setInterval(save,5000);
   addEventListener('beforeunload', save);
   save();
+
 })();
 </script>
 
