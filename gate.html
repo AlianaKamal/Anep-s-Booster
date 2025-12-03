@@ -14,31 +14,42 @@
     .row { display:flex; align-items:center; gap:8px; justify-content:flex-start; margin-top:6px; }
     label.small{font-size:14px;color:#444}
     .checkbox-row {
-    display: flex;
-    align-items: center;
-    justify-content: center; /* center horizontally */
-    gap: 6px; /* jarak comel */
-    margin-top: 6px;
-    font-size: 13px;
-}
+      display: flex;
+      align-items: center;
+      justify-content: center; /* center horizontally */
+      gap: 8px; /* jarak comel */
+      margin-top: 6px;
+      font-size: 13px;
+    }
+    .checkbox-row input[type="checkbox"]{ width:16px; height:16px; }
+    .sr-only{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
   </style>
 </head>
 <body>
   <div class="box" role="main" aria-label="Private gate">
     <h2>VIP Access: Boyfriend Edition</h2>
     <p>Masukkan kata kunci, macam awak kunci hati saya.</p>
-    <input id="pw" type="password" placeholder="Birthday Cinta Hati (Awal No IC)" autocomplete="current-password" autofocus />
-  <div class="checkbox-row">
-    <input type="checkbox" id="rememberMe">
-    <label for="rememberMe">Tick ni kalau awak nak saya stay.</label>
-</div>
-    <button id="go">Buka</button>
-    <div id="err">Dah Tak Ingat Birthday Saya Ke!</div>
+
+    <!-- password input -->
+    <label class="sr-only" for="pw">Kata Kunci</label>
+    <input id="pw" type="password" placeholder="Birthday Cinta Hati (Awal No IC)" autocomplete="current-password" autofocus aria-label="Kata kunci" />
+
+    <!-- FIXED: checkbox id is rememberMe and script reads same id -->
+    <div class="checkbox-row" role="group" aria-label="Ingat saya">
+      <input type="checkbox" id="rememberMe" aria-describedby="rememberHelp" />
+      <label for="rememberMe" id="rememberHelp">Tick ni kalau awak nak saya stay.</label>
+    </div>
+
+    <button id="go" aria-describedby="err">Buka</button>
+
+    <div id="err" role="alert" aria-live="polite">Dah Tak Ingat Birthday Saya Ke!</div>
+    <div class="hint">Nota: akses ini untuk kegunaan peribadi sahaja.</div>
   </div>
 
 <script>
   // ----- CONFIG -----
-  // Masukkan SHA-256 hex password anda di sini
+  // Masukkan SHA-256 hex password anda di sini (contoh). 
+  // Jangan kongsi fail ini jika orang lain boleh baca repos anda.
   const PASSWORD_HASH = "dd33b09e18584afa3fb3797dedfe7114f36dc9264a13683a05ffc850ba60f9c0";
   const TOKEN_KEY = 'mood_booster_auth_v1';
   // default expiry (ms) for non-remembered tokens (7 days)
@@ -52,7 +63,7 @@
     return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
   }
 
-  // Save token. If remember=true -> persistent token with "perm" flag
+  // Save token. If remember=true -> persistent token (perm)
   function saveToken(remember){
     const ts = Date.now();
     if (remember) {
@@ -75,22 +86,27 @@
     return (Date.now() - ts) < DEFAULT_EXPIRY_MS;
   }
 
-  // helper to show error
+  // helper to show/hide error nicely
+  const errEl = document.getElementById('err');
+  let errTimeout = null;
   function showError(msg){
-    const e = document.getElementById('err');
-    e.textContent = msg;
-    e.style.display = 'block';
+    if (errTimeout) clearTimeout(errTimeout);
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    // auto-hide after 6s to keep UI clean
+    errTimeout = setTimeout(()=>{ errEl.style.display = 'none'; }, 6000);
   }
-  function hideError(){ document.getElementById('err').style.display = 'none'; }
+  function hideError(){ errEl.style.display = 'none'; if (errTimeout) clearTimeout(errTimeout); }
 
   // on click
   document.getElementById('go').addEventListener('click', async ()=>{
     hideError();
     try {
       const pw = (document.getElementById('pw').value || '').trim();
-      // handle missing remember safely
-      const rememberEl = document.getElementById('remember');
+      // READ CORRECT CHECKBOX ID HERE (rememberMe)
+      const rememberEl = document.getElementById('rememberMe');
       const remember = rememberEl ? !!rememberEl.checked : false;
+
       if (!pw) { showError('Sila masukkan kata kunci.'); return; }
       const h = await sha256Hex(pw);
       if (h === PASSWORD_HASH){
@@ -122,8 +138,16 @@
       console.warn('checkToken failed', e);
     }
   })();
+
+  /* ---------- Optional: compute hash locally (dev helper)
+     Jika anda mahu tahu SHA-256 hex untuk password plaintext anda,
+     buka gate.html di browser, buka Console (F12) dan jalankan:
+
+       sha256Hex('your-plaintext-password').then(console.log)
+
+     Kemudian salin hex yang terhasil ke const PASSWORD_HASH di atas.
+     Ingat: jangan kongsi hex atau password dengan orang lain.
+  */
 </script>
 </body>
 </html>
-
-
