@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Mood Booster</title>
 
-    <!-- ===== Gaya Visual Baru (tidak ubah JS asal) ===== -->
     <style>
       :root{
         --pink:#ff69b4;
@@ -44,7 +43,7 @@
 
       /* Left column: avatar + progress + buttons (centered column) */
       .left-col {
-          width: 420px;
+          width: 560px;
           display:flex;
           flex-direction:column;
           align-items:center;
@@ -59,7 +58,7 @@
           box-shadow: 0 6px 18px rgba(0,0,0,0.06);
       }
 
-      /* Keep original pet-display styles but adapt to new layout */
+      /* Pet image */
       #pet-display {
           width:150px;
           height:150px;
@@ -86,23 +85,6 @@
       }
       .action-big { width:160px; }
 
-      /* right-col: extras */
-      .right-col{
-          width:250px; display:flex; flex-direction:column; gap:10px; align-items:center;
-      }
-      #extrasBar {
-          display:flex; flex-direction:column; gap:10px; align-items:center;
-      }
-      #extrasBar .row { display:flex; gap:8px; align-items:center; }
-      #extrasBar button{
-          padding:8px 12px; border-radius:10px; border:none; background:#ff9ccf; color:#111; cursor:pointer;
-          font-weight:600;
-      }
-      #soundToggle { background:#28a745; color:white; box-shadow: 0 4px 10px rgba(40,167,69,0.12); }
-      #dailyBtn { background:#ff8fa6; color:#111; }
-      #snapshotBtn { background:#f4a6d3; }
-      #levelBadge { font-weight:700; padding:6px 10px; border-radius:999px; background:#ffd6e8; color:#b10b5a; display:inline-block; }
-
       /* reward visuals */
       .reward-item {
         position:absolute; pointer-events:none; width:64px; height:64px; transform:translate(-50%,-50%) scale(0.1);
@@ -114,53 +96,34 @@
       @media (max-width:780px){
           .container{ flex-direction:column; width:94%; padding:20px; gap:16px;}
           .left-col{ width:100%}
-          .right-col{ width:100%; flex-direction:row; justify-content:center; gap:12px;}
       }
     </style>
 </head>
 <body>
 
-  <!-- ===== Struktur Kad Baru (mengekalkan ID asal) ===== -->
   <div class="container">
     <div class="left-col">
       <h1>Hi B (B for Brader)</h1>
 
       <div class="avatar-wrap" aria-hidden="true">
-        <!-- ID pet-display dikekalkan supaya skrip asal berfungsi tanpa ubah -->
         <img id="pet-display" src="ratna_normal.png" alt="Gambar Pet Maya">
       </div>
 
       <div class="meter" aria-hidden="true" style="width:100%;">
-        <!-- ID health-bar dikekalkan -->
         <div id="health-bar" class="progress">Kesihatan</div>
       </div>
 
       <div id="status-message">Hai Anep!</div>
 
       <div class="buttons" role="group" aria-label="Kawalan pet">
-        <!-- onclick masih menunjuk fungsi asal anda -->
         <button onclick="feedPet()">Beri Makan 🍔</button>
         <button onclick="petPet()">Pujuk 🤗</button>
         <button onclick="sendKiss()" class="action-big">Send Kiss 😘</button>
       </div>
     </div>
-
-    <div class="right-col">
-      <div id="extrasBar">
-        <div class="row">
-          <button id="dailyBtn" title="Claim daily snack">Daily Snack</button>
-          <button id="soundToggle" title="Toggle sound">🔊 On</button>
-        </div>
-        <div class="row">
-          <button id="snapshotBtn" title="Download snapshot">Snapshot</button>
-          <div id="levelBadge">Lvl 1</div>
-        </div>
-        <div style="font-size:12px;color:#b23e72;">Tip: tekan butang untuk beri perhatian</div>
-      </div>
-    </div>
   </div>
 
-  <!-- confetti canvas (fixed, di atas) -->
+  <!-- confetti canvas -->
   <canvas id="confettiCanvas" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;"></canvas>
 
   <!-- ===== Skrip Asal (TIDAK DIUBAH) ===== -->
@@ -227,8 +190,6 @@
         }
     } 
 
-    /* FUNGSI animatePet() ASAL DIBUANG KERANA LOGIK BARU SUDAH DILETAKKAN DALAM FUNGSI INTERAKSI */
-
     // Kesihatan berkurangan secara beransur-ansur dari masa ke masa
     setInterval(() => {
         health = Math.max(0, health - 2);
@@ -238,7 +199,6 @@
             changeImage('ratna_normal.png'); // Kembali ke gambar biasa bila tiada interaksi
         } else {
             updatePetStatus("Nak attention pwiss! 🥺"); 
-            // Apabila berkurangan, kita tetapkan semula gambar kepada normal jika ia bukan normal
             if (!petDisplay.src.includes('ratna_normal.png') && 
                 !petDisplay.src.includes('ratna_makan.png') && 
                 !petDisplay.src.includes('ratna_gembira.png') && 
@@ -251,14 +211,13 @@
 
     // Muatkan status awal
     updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊");
-    // Pastikan imej awal adalah normal
     changeImage('ratna_normal.png');
 
 </script>
 
-  <!-- ===== Integration Block (ADDED) — localStorage, confetti, audio, daily, combo/XP, snapshot ===== -->
+  <!-- ===== Integration Block (ADDED) — localStorage, confetti, audio, combo/XP (guarded) ===== -->
   <script>
-/* Integration layer — paste after original script. Does not change original functions' internals. */
+/* Integration layer — keeps audio + save/XP/confetti but guards UI hooks that were removed */
 if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function') {
 
   const STORAGE_KEY = 'petState_v2';
@@ -271,13 +230,12 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   };
   if (typeof window.health === 'number') state.health = window.health;
 
-  // UI refs (these IDs exist in the HTML above)
-  const dailyBtn = document.getElementById('dailyBtn');
-  const soundToggle = document.getElementById('soundToggle');
-  const levelBadge = document.getElementById('levelBadge');
-  const snapshotBtn = document.getElementById('snapshotBtn');
+  // UI refs (these elements were removed from DOM, so check existence)
+  const dailyBtn = document.getElementById('dailyBtn');       // likely null
+  const soundToggle = document.getElementById('soundToggle'); // likely null
+  const levelBadge = document.getElementById('levelBadge');   // likely null
+  const snapshotBtn = document.getElementById('snapshotBtn'); // likely null
 
-  // reward items (emoji by default)
   const REWARDS = [
     { id:'candy', name:'Candy', health: 12, xp: 12, icon: '🍬' },
     { id:'toy', name:'Toy', health: 20, xp: 18, icon: '🧸' },
@@ -286,36 +244,46 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
 
   // save/load helpers
   function saveState(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ health: state.health, xp: state.xp, level: state.level, lastClaim: state.lastClaim }));
-    localStorage.setItem('pet_xp', String(state.xp));
-    localStorage.setItem('pet_level', String(state.level));
-    localStorage.setItem('pet_mute', state.mute ? '1' : '0');
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ health: state.health, xp: state.xp, level: state.level, lastClaim: state.lastClaim }));
+      localStorage.setItem('pet_xp', String(state.xp));
+      localStorage.setItem('pet_level', String(state.level));
+      localStorage.setItem('pet_mute', state.mute ? '1' : '0');
+    } catch(e){
+      console.warn('saveState failed', e);
+    }
   }
   (function loadStored(){
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (typeof saved.health === 'number') {
-      state.health = saved.health;
-      if (typeof window.health !== 'undefined') window.health = state.health;
-      const hb = document.getElementById('health-bar');
-      if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if (typeof saved.health === 'number') {
+        state.health = saved.health;
+        if (typeof window.health !== 'undefined') window.health = state.health;
+        const hb = document.getElementById('health-bar');
+        if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
+      }
+      // if levelBadge exists update it
+      if (levelBadge && typeof saved.level === 'number') {
+        levelBadge.textContent = `Lvl ${saved.level}`;
+      }
+    } catch(e){
+      console.warn('loadStored failed', e);
     }
   })();
 
-  // AUDIO SETUP — USING YOUR EXISTING FILE NAMES
-  // If your files are in a folder, change the paths accordingly.
-  const sFeed = new Audio('sfxeat.mp3.wav');   // SOUND: feed/makan
-  const sPet  = new Audio('sfxpurr.mp3.wav');  // SOUND: pet / bunyi comel (human-like)
-  const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
+  // AUDIO SETUP — keep using your existing file names (change paths if in folder)
+  const sFeed = new Audio('sfxeat.mp3.wav');   // feed
+  const sPet  = new Audio('sfxpurr.mp3.wav');  // pet (human-like)
+  const sKiss = new Audio('sfxkiss.mp3.wav');  // kiss
 
-  [sFeed, sPet, sKiss].forEach(a => {
-      a.preload = 'auto';
-      a.volume = 0.9;
-  });
+  [sFeed, sPet, sKiss].forEach(a => { a.preload = 'auto'; a.volume = 0.9; });
 
-  function playSound(audio) { if (state.mute) return; audio.currentTime = 0; audio.play().catch(()=>{}); }
-  function refreshSoundToggleUI(){ soundToggle.textContent = state.mute ? '🔇 Off' : '🔊 On'; soundToggle.style.background = state.mute ? '#999' : '#28a745'; }
+  function playSound(audio) { if (state.mute) return; try { audio.currentTime = 0; audio.play().catch(()=>{}); } catch(e){} }
+
+  // refresh UI for sound toggle only if control exists
+  function refreshSoundToggleUI(){ if (!soundToggle) return; soundToggle.textContent = state.mute ? '🔇 Off' : '🔊 On'; soundToggle.style.background = state.mute ? '#999' : '#28a745'; }
   refreshSoundToggleUI();
-  soundToggle.addEventListener('click', ()=>{ state.mute = !state.mute; localStorage.setItem('pet_mute', state.mute ? '1' : '0'); refreshSoundToggleUI(); });
+  if (soundToggle) soundToggle.addEventListener('click', ()=>{ state.mute = !state.mute; localStorage.setItem('pet_mute', state.mute ? '1' : '0'); refreshSoundToggleUI(); });
 
   // Confetti canvas
   const confCanvas = document.getElementById('confettiCanvas');
@@ -350,9 +318,9 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
       burstConfetti();
       if (typeof window.updatePetStatus === 'function') window.updatePetStatus(`Level up! Now level ${state.level} 🎉`);
     }
-    saveState(); updateLevelUI();
+    saveState();
+    if (levelBadge) levelBadge.textContent = `Lvl ${state.level}`;
   }
-  function updateLevelUI(){ levelBadge.textContent = `Lvl ${state.level}`; }
 
   // combo tap for feed
   let comboTaps = 0, comboTimer = null;
@@ -434,54 +402,56 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
     saveState();
   };
 
-  // Daily claim
-  dailyBtn.addEventListener('click', ()=>{
-    const today = new Date().toISOString().slice(0,10);
-    if (state.lastClaim === today){
-      alert('Anda sudah tuntut Daily Snack hari ini!');
-      return;
-    }
-    state.lastClaim = today;
-    const reward = REWARDS[Math.floor(Math.random()*REWARDS.length)];
-    state.health = Math.min(100, state.health + reward.health);
-    if (typeof window.health !== 'undefined') window.health = state.health;
-    if (typeof window.updatePetStatus === 'function') window.updatePetStatus(`${reward.name}! +${reward.health} 🎁`);
-    showRewardVisual(reward);
-    burstConfetti();
-    addXP(reward.xp);
-    saveState();
-  });
+  // If dailyBtn exists (it doesn't in this HTML) register listener
+  if (dailyBtn) {
+    dailyBtn.addEventListener('click', ()=>{
+      const today = new Date().toISOString().slice(0,10);
+      if (state.lastClaim === today){
+        alert('Anda sudah tuntut Daily Snack hari ini!');
+        return;
+      }
+      state.lastClaim = today;
+      const reward = REWARDS[Math.floor(Math.random()*REWARDS.length)];
+      state.health = Math.min(100, state.health + reward.health);
+      if (typeof window.health !== 'undefined') window.health = state.health;
+      if (typeof window.updatePetStatus === 'function') window.updatePetStatus(`${reward.name}! +${reward.health} 🎁`);
+      showRewardVisual(reward);
+      burstConfetti();
+      addXP(reward.xp);
+      saveState();
+    });
+  }
 
-  // Snapshot
-  snapshotBtn.addEventListener('click', async ()=>{
-    try {
-      const petImg = document.getElementById('pet-display');
-      if (!petImg) throw 'No pet image';
-      const c = document.createElement('canvas');
-      c.width = petImg.naturalWidth || 300;
-      c.height = petImg.naturalHeight || 300;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
-      ctx.drawImage(petImg, 0, 0, c.width, c.height);
-      ctx.fillStyle = '#000'; ctx.font = '18px sans-serif';
-      ctx.fillText(`Health: ${state.health}%`, 10, c.height - 30);
-      ctx.fillText(`Level: ${state.level}`, 10, c.height - 10);
-      const url = c.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = url; a.download = `pet_snapshot_${new Date().toISOString().slice(0,10)}.png`;
-      document.body.appendChild(a); a.click(); a.remove();
-    } catch (e){
-      alert('Snapshot failed: ' + e);
-    }
-  });
+  // If snapshot control exists (not in this HTML) register listener
+  if (snapshotBtn) {
+    snapshotBtn.addEventListener('click', async ()=>{
+      try {
+        const petImg = document.getElementById('pet-display');
+        if (!petImg) throw 'No pet image';
+        const c = document.createElement('canvas');
+        c.width = petImg.naturalWidth || 300;
+        c.height = petImg.naturalHeight || 300;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+        ctx.drawImage(petImg, 0, 0, c.width, c.height);
+        ctx.fillStyle = '#000'; ctx.font = '18px sans-serif';
+        ctx.fillText(`Health: ${state.health}%`, 10, c.height - 30);
+        ctx.fillText(`Level: ${state.level}`, 10, c.height - 10);
+        const url = c.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url; a.download = `pet_snapshot_${new Date().toISOString().slice(0,10)}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+      } catch (e){
+        alert('Snapshot failed: ' + e);
+      }
+    });
+  }
 
   setInterval(saveState, 5000);
   window.addEventListener('beforeunload', saveState);
-  updateLevelUI();
-  refreshSoundToggleUI();
 
 } else {
-  console.warn('Integration failed: original functions not found. Pastikan skrip asal dimuatkan dahulu.');
+  console.warn('Integration skipped: original functions not found.');
 }
   </script>
 
