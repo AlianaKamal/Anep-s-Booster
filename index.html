@@ -1,181 +1,556 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mood Booster</title>
-    <style>
-        body {
-            background-color: #ffe4e1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
-            text-align: center;
-            overflow: hidden; /* Tambah ini untuk elak scrollbar semasa animasi */
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            max-width: 400px;
-        }
-        #pet-display {
-            width: 150px; /* Saiz gambar */
-            height: 150px;
-            border-radius: 50%; /* Bentuk bulat untuk gambar */
-            object-fit: cover; /* Pastikan gambar muat dalam bulatan */
-            margin-bottom: 10px;
-            border: 4px solid #ff69b4;
-            /* Update transition untuk menampung pelbagai animasi */
-            transition: transform 0.3s ease-out, border-color 0.5s, opacity 0.3s;
-        }
-        #status-message {
-            margin-bottom: 10px;
-            color: #ff69b4;
-            font-weight: bold;
-        }
-        .buttons button {
-            padding: 10px 15px;
-            margin: 5px;
-            font-size: 1em;
-            cursor: pointer;
-            background-color: #ff69b4;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        .meter {
-            width: 100%;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .progress {
-            width: 50%; /* Lebar awal */
-            height: 20px;
-            background-color: #ff1493; /* Warna merah jambu terang */
-            border-radius: 5px;
-            transition: width 0.5s ease-in-out;
-            text-align: center;
-            line-height: 20px;
-            color: white;
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mood Booster — Floating Love Notes (Enhanced)</title>
+<style>
+  :root{
+    --pink: #ff69b4;
+    --hotpink: #ff1493;
+    --bg: linear-gradient(180deg, #fff7fb, #ffeef8);
+    --note-bg: rgba(255,245,250,0.96);
+    --note-border: rgba(255,105,180,0.92);
+    --note-color: #3b0b3b;
+    --area-bg: #fff0f6;
+  }
+  /* Themes (overridden on .theme-*) */
+  .theme-pink { --note-bg: rgba(255,245,250,0.98); --note-border: rgba(255,105,180,0.92); --note-color:#3b0b3b; --area-bg:#fff0f6; }
+  .theme-night{ --note-bg: rgba(20,20,30,0.9); --note-border: rgba(255,105,180,0.14); --note-color:#fff; --area-bg: linear-gradient(180deg,#1b1b2f,#11111a); --pink:#ffa0d6; }
+  .theme-pastel{ --note-bg: rgba(245,255,251,0.97); --note-border: rgba(120,200,180,0.7); --note-color:#064; --area-bg: linear-gradient(180deg,#f6fffb,#e8fff7); --pink:#36c9a2; }
+
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial; background:var(--bg); color:#222}
+  .page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
+  .container {
+    width:100%; max-width:920px; background:white; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,0.08);
+    display:grid; grid-template-columns: 1fr 420px; gap:18px; padding:18px; align-items:start;
+  }
+
+  /* Left: pet area */
+  .pet-box { padding:12px; border-radius:10px; background:linear-gradient(180deg,#fff,#fffaf8); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
+  .pet-header{display:flex;align-items:center;gap:12px}
+  .pet-image { width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--pink); transition:transform .25s ease,border-color .2s linear; }
+  h1{font-size:1.15rem;margin:0}
+  .status-msg{ margin:8px 0;color:var(--pink); font-weight:600; min-height:1.2em}
+
+  .meter{margin:10px 0;background:#f0f0f0;border-radius:10px;height:28px;overflow:hidden}
+  .progress{height:100%;width:100%;background:var(--hotpink);color:white;text-align:center;line-height:28px;font-weight:700;transition:width .45s ease}
+
+  .pet-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .btn{background:var(--pink);border:none;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}
+  .btn.secondary{background:transparent;color:var(--pink);border:1px solid rgba(0,0,0,0.06)}
+
+  /* Right: Floating notes & settings */
+  .notes-panel{ padding:12px; border-radius:10px; background:linear-gradient(180deg,#fffefe,#fff7fb); min-height:420px; position:relative}
+  .notes-header{display:flex;justify-content:space-between;align-items:center}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .note-area{ position:relative;border-radius:10px;height:300px;background:var(--area-bg); border:1px dashed rgba(0,0,0,0.04); overflow:hidden }
+
+  /* floating note */
+  .love-note {
+    position:absolute;
+    min-width:120px; max-width:240px; padding:10px 12px; border-radius:12px; background:var(--note-bg);
+    color:var(--note-color); border:2px solid var(--note-border); box-shadow:0 8px 28px rgba(200,0,100,0.06);
+    font-weight:700; text-align:center; pointer-events:none; transform-origin:center;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(8px) scale(.98); opacity:0; }
+    10% { transform: translateY(0) scale(1); opacity:1; }
+    60% { transform: translateY(-34px) scale(1.02); }
+    100% { transform: translateY(-80px) scale(1); opacity:0; }
+  }
+  .love-note.animate { animation: floatUp var(--dur,3800ms) ease-in-out forwards; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .love-note.animate { animation:none; transform:translateY(-20px); opacity:1; transition:transform .3s, opacity .3s; }
+  }
+
+  .settings { margin-top:12px; display:flex;flex-direction:column; gap:8px }
+  .row { display:flex; gap:8px; align-items:center }
+  input[type="text"]{flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)}
+  .small{font-size:0.86rem;color:#666}
+  .badge{background:rgba(0,0,0,0.06);padding:6px 8px;border-radius:8px;font-size:0.85rem}
+  .mutebtn{background:#333;color:#fff;padding:6px 8px;border-radius:8px;border:none;cursor:pointer}
+
+  /* responsive */
+  @media (max-width:920px){
+    .container{grid-template-columns:1fr; padding:14px}
+    .notes-panel{order:-1}
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Hi B (B for Brader)</h1>
-        <!-- Gantikan 'my_image.png' dengan pautan gambar anda -->
-        <img id="pet-display" src="ratna_normal.png" alt="Gambar Pet Maya">
-        
-        <div class="meter">
-            <div id="health-bar" class="progress">Kesihatan</div>
+  <div class="page">
+    <div class="container theme-pink" id="appRoot">
+      <!-- LEFT: Pet -->
+      <section class="pet-box" aria-labelledby="petTitle">
+        <div class="pet-header">
+          <img id="petDisplay" class="pet-image" src="ratna_normal.png" alt="Gambar pet Ratna">
+          <div>
+            <h1 id="petTitle">Hi B (B for Brader)</h1>
+            <div id="statusMessage" class="status-msg">Hai Anep! Jaga Titew baik-baik ya! 😊</div>
+            <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+              <div id="healthBar" class="progress" style="width:100%">100% Mood Titew</div>
+            </div>
+          </div>
         </div>
-        
-        <div id="status-message">Hai Anep!</div>
-        <div class="buttons">
-            <button onclick="feedPet()">Beri Makan 🍔</button>
-            <button onclick="petPet()">Pujuk 🤗</button>
-            <button onclick="sendKiss()">Send Kiss 😘</button>
+
+        <div class="pet-controls" aria-label="Kawalan pet">
+          <button id="feedBtn" class="btn">Beri Makan 🍔</button>
+          <button id="petBtn" class="btn">Pujuk 🤗</button>
+          <button id="kissBtn" class="btn">Send Kiss 😘</button>
+          <button id="saveStateBtn" class="btn secondary">Save Now</button>
         </div>
+
+        <div class="small" style="margin-top:12px">Tip: bila anda tekan butang di atas, nota manja akan muncul secara automatik.</div>
+      </section>
+
+      <!-- RIGHT: Notes + Settings -->
+      <aside class="notes-panel" aria-labelledby="notesTitle">
+        <div class="notes-header">
+          <div>
+            <h2 id="notesTitle" style="margin:0;color:var(--pink)">Floating Love Notes</h2>
+            <div class="small">Drop note manual, auto mode, themes, sfx, dan simpan mesej.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="badge" id="notesCount">0 notes</div>
+            <button id="muteToggle" class="mutebtn" aria-pressed="false">🔊</button>
+          </div>
+        </div>
+
+        <div class="controls" role="toolbar" aria-label="Kawalan nota" style="margin-top:10px">
+          <button id="dropBtn" class="btn">Drop Note 💌</button>
+          <button id="autoBtn" class="btn secondary" aria-pressed="false">Auto: Mati</button>
+          <button id="clearBtn" class="btn secondary">Clear</button>
+        </div>
+
+        <div class="note-area" id="noteArea" aria-live="polite" aria-atomic="false" tabindex="0"></div>
+
+        <div class="settings">
+          <div class="row">
+            <input id="customInput" type="text" placeholder="Tulis mesej custom & Enter" aria-label="Mesej custom">
+            <button id="addCustom" class="btn secondary">Tambah</button>
+          </div>
+
+          <div class="row">
+            <div class="small">Theme:</div>
+            <select id="themeSelect" aria-label="Pilih tema">
+              <option value="theme-pink">Pink</option>
+              <option value="theme-pastel">Pastel</option>
+              <option value="theme-night">Night</option>
+            </select>
+
+            <div style="flex:1"></div>
+
+            <div class="small">Auto interval (s):</div>
+            <input id="autoInterval" type="number" min="3" value="7" style="width:72px;padding:6px;border-radius:8px;border:1px solid rgba(0,0,0,0.08)">
+          </div>
+
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <div class="small">Saved messages</div>
+              <select id="savedList" style="width:260px;padding:6px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)"></select>
+            </div>
+            <div>
+              <button id="deleteSaved" class="btn secondary">Delete</button>
+            </div>
+          </div>
+
+          <div class="row" style="justify-content:space-between">
+            <div class="small">Note duration (ms):</div>
+            <input id="noteDur" type="number" min="1000" step="200" value="3800" style="width:100px;padding:6px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)">
+          </div>
+        </div>
+      </aside>
     </div>
+  </div>
 
 <script>
-    const petDisplay = document.getElementById('pet-display');
-    const statusMessage = document.getElementById('status-message');
-    const healthBar = document.getElementById('health-bar');
+/* Enhanced Floating Love Notes + Pet integration
+   Features implemented:
+   - localStorage for saved messages & settings
+   - theme support (applies class to root container)
+   - sfx on note drop with mute toggle
+   - integration: show note when feed/pet/kiss called
+   - auto-mode with configurable interval
+   - accessible aria-live usage
+*/
 
-    // Status awal (skala 0 hingga 100)
-    let health = 100;
-    // Fungsi utiliti untuk tukar gambar
-    function changeImage(imageSrc) {
-        petDisplay.src = imageSrc;
+// ---------- Configuration & Storage ----------
+const STORAGE_KEY = 'floatingLoveNotesState_v1';
+
+const DEFAULT_NOTES = [
+  "Awak comel hari ni 😊",
+  "Saya rindu awak. Hati ku hangat 🥹",
+  "Nak peluk? Sini, datang sini 🤗",
+  "Awak wangi macam biskut baru dibakar 🍪",
+  "Jangan stress. Saya ada dengan awak 💖",
+  "Kopi + awak = sempurna ☕️",
+  "Senyuman awak buat hari saya 🌞",
+  "Jom makan bersama nanti? 🍔",
+  "Awak memang special untuk saya ✨",
+  "Hidup ini manis sebab ada awak 🍬",
+  "Awak hebat, ingat tu 💪",
+  "Anep my main character 🥰",
+  "Muaah! 😘",
+  "Satu pelukan virtual untuk awak 🤍",
+  "Terima kasih sebab wujud"
+];
+
+// DOM references
+const appRoot = document.getElementById('appRoot');
+const noteArea = document.getElementById('noteArea');
+const dropBtn = document.getElementById('dropBtn');
+const autoBtn = document.getElementById('autoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const addCustom = document.getElementById('addCustom');
+const customInput = document.getElementById('customInput');
+const savedList = document.getElementById('savedList');
+const deleteSaved = document.getElementById('deleteSaved');
+const themeSelect = document.getElementById('themeSelect');
+const autoIntervalInput = document.getElementById('autoInterval');
+const noteDurInput = document.getElementById('noteDur');
+const notesCountBadge = document.getElementById('notesCount');
+const muteToggle = document.getElementById('muteToggle');
+
+const feedBtn = document.getElementById('feedBtn');
+const petBtn = document.getElementById('petBtn');
+const kissBtn = document.getElementById('kissBtn');
+const saveStateBtn = document.getElementById('saveStateBtn');
+
+const petDisplay = document.getElementById('petDisplay');
+const statusMessage = document.getElementById('statusMessage');
+const healthBar = document.getElementById('healthBar');
+
+// SFX files (place them under sfx/ or change path)
+const SFX = {
+  note: new Audio('sfx/pop1.mp3'), // sound when note drops
+  feed: new Audio('sfx/eat.mp3'),
+  pet: new Audio('sfx/purr.mp3'),
+  kiss: new Audio('sfx/kiss.mp3')
+};
+let isMuted = false;
+
+// State
+let state = {
+  notes: DEFAULT_NOTES.slice(),
+  saved: [], // user saved messages
+  auto: false,
+  autoInterval: 7000,
+  noteDuration: 3800,
+  theme: 'theme-pink',
+  shownCount: 0,
+  health: 100,
+  lastImage: 'ratna_normal.png'
+};
+
+// Try load from storage
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state = Object.assign(state, parsed);
+      // ensure notes array exists
+      if (!Array.isArray(state.notes)) state.notes = DEFAULT_NOTES.slice();
+      if (!Array.isArray(state.saved)) state.saved = [];
     }
+  } catch(e) {
+    console.warn('loadState error', e);
+  }
+}
 
-    // Fungsi apabila memberi makan
-    function feedPet() {
-        health = Math.min(100, health + 15);
-        updatePetStatus("Yummy! Masyeh Anep! 😋");
-        changeImage('ratna_makan.png'); // Tukar gambar makan
-        // Animasi melantun kecil
-        petDisplay.style.transform = 'translateY(-10px)'; 
-        setTimeout(() => { petDisplay.style.transform = 'translateY(0px)'; }, 300);
-    }
+// Save to localStorage
+function persistState() {
+  try {
+    const toSave = {
+      notes: state.notes,
+      saved: state.saved,
+      auto: state.auto,
+      autoInterval: state.autoInterval,
+      noteDuration: state.noteDuration,
+      theme: state.theme,
+      shownCount: state.shownCount,
+      health: state.health,
+      lastImage: state.lastImage
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch(e) { console.warn('persist error', e); }
+}
 
-    // Fungsi apabila membelai
-    function petPet() {
-        health = Math.min(100, health + 10);
-        updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
-        changeImage('ratna_gembira.png'); // Tukar gambar gembira
-        // Animasi bergoncang (pusing)
-        petDisplay.style.transform = 'rotate(-5deg)'; 
-        setTimeout(() => {
-            petDisplay.style.transform = 'rotate(5deg)';
-            setTimeout(() => { petDisplay.style.transform = 'rotate(0deg)'; }, 100);
-        }, 100);
-    }
+// ---------- UI helpers ----------
+function updateSavedListUI() {
+  savedList.innerHTML = '';
+  state.saved.forEach((m, idx)=>{
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = m.length>40 ? m.slice(0,40)+'…' : m;
+    savedList.appendChild(opt);
+  });
+}
 
-    // Fungsi baharu: Hantar Ciuman
-    function sendKiss() {
-        health = Math.min(100, health + 5); // Ciuman pun baik untuk kesihatan!
-        updatePetStatus("Muaahh! 💖");
-        changeImage('ratna_kiss.png'); // Tukar gambar cium
-        // Animasi skala (zoom in/out)
-        petDisplay.style.transform = 'scale(1.2)';
-        petDisplay.style.borderColor = '#FF0000'; // Tukar border kepada merah cinta
+function updateNotesCount() {
+  notesCountBadge.textContent = `${state.shownCount} notes`;
+}
 
-        setTimeout(() => {
-            petDisplay.style.transform = 'scale(1)';
-            petDisplay.style.borderColor = '#ff69b4'; // Kembali ke warna asal
-        }, 500);
-    }
+function applyTheme(themeClass) {
+  // remove any theme-* classes
+  appRoot.classList.remove('theme-pink','theme-pastel','theme-night');
+  appRoot.classList.add(themeClass);
+  state.theme = themeClass;
+  persistState();
+  themeSelect.value = themeClass;
+}
 
-    // Fungsi untuk kemas kini paparan dan mesej
-    function updatePetStatus(message) {
-        statusMessage.textContent = message;
-        healthBar.style.width = `${health}%`;
-        healthBar.textContent = `${health}% Mood Titew`;
-        
-        if (health < 30) {
-            statusMessage.style.color = 'red';
-        } else {
-            statusMessage.style.color = '#ff69b4';
-        }
-    } 
+// ---------- Floating note logic ----------
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1)) + a; }
+function pickRandomNote() {
+  // combine default + saved if any
+  const pool = state.notes.concat(state.saved);
+  return pool[randInt(0, pool.length-1)];
+}
 
-    /* FUNGSI animatePet() ASAL DIBUANG KERANA LOGIK BARU SUDAH DILETAKKAN DALAM FUNGSI INTERAKSI */
+function showNote(text, opts = {}) {
+  const dur = opts.duration || state.noteDuration;
+  state.shownCount++;
+  updateNotesCount();
 
-    // Kesihatan berkurangan secara beransur-ansur dari masa ke masa
-    setInterval(() => {
-        health = Math.max(0, health - 2);
-        
-        if (health === 0) {
-            updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀");
-            changeImage('ratna_normal.png'); // Kembali ke gambar biasa bila tiada interaksi
-        } else {
-            updatePetStatus("Nak attention pwiss! 🥺"); 
-            // Apabila berkurangan, kita tetapkan semula gambar kepada normal jika ia bukan normal
-            if (!petDisplay.src.includes('ratna_normal.png') && 
-                !petDisplay.src.includes('ratna_makan.png') && 
-                !petDisplay.src.includes('ratna_gembira.png') && 
-                !petDisplay.src.includes('ratna_kiss.png')) {
-                    // Hanya tukar jika gambar semasa tiada dalam senarai interaksi aktif
-                     changeImage('ratna_normal.png');
-            }
-        }
+  const note = document.createElement('div');
+  note.className = 'love-note animate';
+  note.textContent = text;
+  note.style.setProperty('--dur', dur + 'ms');
 
-    }, 3000); // Setiap 3 saat
+  // temporarily append to measure
+  note.style.visibility = 'hidden';
+  noteArea.appendChild(note);
+  const areaRect = noteArea.getBoundingClientRect();
+  const noteRect = note.getBoundingClientRect();
+  const pad = 12;
+  const maxLeft = Math.max(0, areaRect.width - noteRect.width - pad*2);
+  const maxTop = Math.max(0, areaRect.height - noteRect.height - pad*2);
+  const left = pad + randInt(0, Math.floor(maxLeft));
+  const top  = pad + randInt(0, Math.floor(maxTop));
+  note.style.left = left + 'px';
+  note.style.top  = top + 'px';
+  note.style.visibility = 'visible';
 
-    // Muatkan status awal
-    updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊");
-    // Pastikan imej awal adalah normal
-    changeImage('ratna_normal.png');
+  // a11y: announce as status
+  note.setAttribute('role','status');
+  note.setAttribute('aria-live','polite');
 
+  // play sfx if not muted
+  if (!isMuted) {
+    try { SFX.note.currentTime = 0; SFX.note.play().catch(()=>{}); } catch(e){}
+  }
+
+  // remove after dur + buffer
+  setTimeout(()=> {
+    if (note.parentNode) note.parentNode.removeChild(note);
+  }, dur + 220);
+}
+
+// ---------- Auto mode ----------
+let autoTimer = null;
+function startAuto() {
+  stopAuto();
+  autoTimer = setInterval(()=> {
+    showNote(pickRandomNote());
+  }, state.autoInterval);
+}
+function stopAuto() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+}
+
+// ---------- Pet integration ----------
+let animTimeout = null;
+function setPetImage(imgSrc) {
+  petDisplay.src = imgSrc;
+  state.lastImage = imgSrc;
+  persistState();
+}
+
+// Basic pet action functions (also update health bar & show note)
+function updatePetHealth(delta, message) {
+  state.health = Math.max(0, Math.min(100, state.health + delta));
+  healthBar.style.width = state.health + '%';
+  healthBar.textContent = state.health + '% Mood Titew';
+  persistState();
+  if (message) statusMessage.textContent = message;
+}
+
+// Feed
+function feedPet() {
+  updatePetHealth(+15, "Yummy! Masyeh Anep! 😋");
+  setPetImage('ratna_makan.png');
+  if (!isMuted) try { SFX.feed.currentTime=0; SFX.feed.play().catch(()=>{}); } catch(e){}
+  // small bounce
+  petDisplay.style.transform = 'translateY(-10px)';
+  clearTimeout(animTimeout);
+  animTimeout = setTimeout(()=> petDisplay.style.transform = 'translateY(0)', 320);
+
+  // show related note
+  showNote(randomFromList([
+    "Wah, makan best! Jom kongsi sepotong 🍰",
+    "Saya lapar jugak, mai makan sama-sama 😋",
+    "Makan dulu, then peluk ya 🤗"
+  ]));
+  persistState();
+}
+
+// Pet (pujuk)
+function petPetAction() {
+  updatePetHealth(+10, "Ocey, Tak Majuk Dah! 🥰");
+  setPetImage('ratna_gembira.png');
+  if (!isMuted) try { SFX.pet.currentTime=0; SFX.pet.play().catch(()=>{}); } catch(e){}
+  petDisplay.style.transform = 'rotate(-6deg)';
+  clearTimeout(animTimeout);
+  animTimeout = setTimeout(()=> { petDisplay.style.transform = 'rotate(6deg)'; setTimeout(()=> petDisplay.style.transform='rotate(0deg)', 140); }, 120);
+
+  showNote(randomFromList([
+    "Titew gembira dapat peluk 😌",
+    "Senyuman awak buat titew meleleh 🥰",
+    "Jom rehat sekejap bersama-sama"
+  ]));
+  persistState();
+}
+
+// Kiss
+function sendKissAction() {
+  updatePetHealth(+5, "Muaahh! 💖");
+  setPetImage('ratna_kiss.png');
+  if (!isMuted) try { SFX.kiss.currentTime=0; SFX.kiss.play().catch(()=>{}); } catch(e){}
+  petDisplay.style.transform = 'scale(1.18)';
+  clearTimeout(animTimeout);
+  animTimeout = setTimeout(()=> { petDisplay.style.transform='scale(1)'; }, 520);
+
+  showNote(randomFromList([
+    "Muaah! Hati saya cair 😘",
+    "Cium balik! 💋",
+    "Simpan ciuman untuk saya ya?"
+  ]));
+  persistState();
+}
+
+// helper random from list
+function randomFromList(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ---------- UI event wiring ----------
+dropBtn.addEventListener('click', ()=> { showNote(pickRandomNote()); persistState(); });
+clearBtn.addEventListener('click', ()=> {
+  const nodes = noteArea.querySelectorAll('.love-note');
+  nodes.forEach(n=> n.parentNode && n.parentNode.removeChild(n));
+  state.shownCount = 0; updateNotesCount(); persistState();
+});
+autoBtn.addEventListener('click', ()=> {
+  state.auto = !state.auto;
+  autoBtn.setAttribute('aria-pressed', String(state.auto));
+  autoBtn.classList.toggle('secondary', !state.auto);
+  autoBtn.textContent = `Auto: ${state.auto ? 'Hidup' : 'Mati'}`;
+  if (state.auto) startAuto(); else stopAuto();
+  persistState();
+});
+
+addCustom.addEventListener('click', ()=> {
+  const v = (customInput.value || '').trim();
+  if (!v) { customInput.focus(); return; }
+  state.saved.push(v);
+  customInput.value = '';
+  updateSavedListUI();
+  persistState();
+  // show the custom note directly too
+  showNote(v);
+});
+
+customInput.addEventListener('keydown', (e)=> { if (e.key === 'Enter') { addCustom.click(); e.preventDefault(); } });
+
+deleteSaved.addEventListener('click', ()=> {
+  const idx = Number(savedList.value);
+  if (!isNaN(idx) && state.saved[idx]) {
+    state.saved.splice(idx,1);
+    updateSavedListUI();
+    persistState();
+  }
+});
+
+themeSelect.addEventListener('change', (e)=> {
+  applyTheme(e.target.value);
+});
+
+autoIntervalInput.addEventListener('change', (e)=> {
+  const v = Number(e.target.value) || 7;
+  state.autoInterval = Math.max(3, v) * 1000;
+  if (state.auto) startAuto();
+  persistState();
+});
+
+noteDurInput.addEventListener('change', ()=> {
+  const v = Number(noteDurInput.value) || 3800;
+  state.noteDuration = Math.max(800, v);
+  persistState();
+});
+
+// mute toggle
+muteToggle.addEventListener('click', ()=> {
+  isMuted = !isMuted;
+  muteToggle.setAttribute('aria-pressed', String(isMuted));
+  muteToggle.textContent = isMuted ? '🔇' : '🔊';
+});
+
+// saved list double-click to show
+savedList.addEventListener('dblclick', ()=> {
+  const idx = Number(savedList.value);
+  if (!isNaN(idx) && state.saved[idx]) showNote(state.saved[idx]);
+});
+
+// Pet control buttons
+feedBtn.addEventListener('click', feedPet);
+petBtn.addEventListener('click', petPetAction);
+kissBtn.addEventListener('click', sendKissAction);
+
+// Save now (persist entire state)
+saveStateBtn.addEventListener('click', ()=> {
+  persistState();
+  alert('State disimpan ✔️');
+});
+
+// ---------- Initialization ----------
+loadState();
+
+// apply theme
+applyTheme(state.theme);
+
+// init UI fields from state
+updateSavedListUI();
+updateNotesCount();
+autoBtn.textContent = `Auto: ${state.auto ? 'Hidup' : 'Mati'}`;
+autoBtn.setAttribute('aria-pressed', String(state.auto));
+autoIntervalInput.value = Math.round(state.autoInterval / 1000);
+noteDurInput.value = state.noteDuration;
+muteToggle.textContent = isMuted ? '🔇' : '🔊';
+themeSelect.value = state.theme || 'theme-pink';
+
+// restore last pet image & health
+if (state.lastImage) petDisplay.src = state.lastImage;
+if (typeof state.health === 'number') {
+  healthBar.style.width = state.health + '%';
+  healthBar.textContent = state.health + '% Mood Titew';
+}
+
+// start auto if needed
+if (state.auto) startAuto();
+
+// show an initial note on load (gentle)
+window.addEventListener('load', ()=> {
+  setTimeout(()=> showNote(pickRandomNote()), 700);
+});
+
+// expose some functions if you want to call from outside
+window.MoodBoosterAPI = {
+  showNote,
+  startAuto, stopAuto,
+  addSaved: (m)=> { if (m && m.trim()){ state.saved.push(m.trim()); updateSavedListUI(); persistState(); } },
+  feedPet, petPetAction, sendKissAction
+};
 </script>
 </body>
 </html>
-
