@@ -156,7 +156,7 @@
     </div>
   </div>
 
-  <!-- confetti canvas -->
+  <!-- confetti / particles canvas -->
   <canvas id="confettiCanvas" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;"></canvas>
 
   <!-- ===== Skrip Asal (TIDAK DIUBAH) ===== -->
@@ -248,10 +248,11 @@
 
 </script>
 
-  <!-- Integration Block (UPDATED) — persist health correctly (reads/writes real `health` variable) -->
+  <!-- Integration Block (UPDATED + Particle Effects) -->
   <script>
-/* Integration layer — updated to persist the real `health` variable (not window.health only).
-   Does NOT change internals of original functions; wraps them to play audio + update state + save. */
+/* Integration layer — persistence, audio SFX, and 3 particle effects:
+   heartBurst (kiss), foodBurst (feed), sparkleBurst (pet).
+   Does not alter original function internals; wraps them. */
 (function(){
   if (!(typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function')) {
     console.warn('Integration skipped: original functions not found.');
@@ -261,10 +262,11 @@
   const STORAGE_KEY = 'petState_v2';
   const lastEl = document.getElementById('last-interaction');
   const themeBtn = document.getElementById('themeToggle');
+  const confCanvas = document.getElementById('confettiCanvas');
+  const cctx = confCanvas && confCanvas.getContext ? confCanvas.getContext('2d') : null;
 
   // Use the actual global `health` variable if present; fallback to 100
   const state = {
-    // prefer the real health variable if exists
     health: (typeof health === 'number') ? health : 100,
     lastInteraction: localStorage.getItem('pet_lastInteraction') || null,
     theme: localStorage.getItem('pet_theme') || 'light'
@@ -284,6 +286,16 @@
     } catch(e){}
   }
 
+  // Resize canvas properly
+  function resizeCanvas(){
+    if(!cctx || !confCanvas) return;
+    // set displayed size
+    confCanvas.width = window.innerWidth;
+    confCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
   // Apply theme
   function applyTheme(t){
     document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
@@ -296,7 +308,6 @@
   // Save minimal state (always read from real `health` variable)
   function saveState(){
     try {
-      // read current real health variable if exists
       if (typeof health === 'number') state.health = health;
       const payload = { health: state.health, lastInteraction: state.lastInteraction, theme: state.theme };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -306,7 +317,7 @@
     }
   }
 
-  // Load saved state (health + lastInteraction + theme) and apply to real `health`
+  // Load saved state and apply to real `health`
   (function loadStored(){
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -314,9 +325,7 @@
       const parsed = JSON.parse(raw || '{}');
       if (typeof parsed.health === 'number') {
         state.health = parsed.health;
-        // write into the real global 'health' variable (used by original script)
-        try { health = state.health; } catch(e){ /* silent */ }
-        // also set window.health for compatibility
+        try { health = state.health; } catch(e){}
         try { window.health = state.health; } catch(e){}
         const hb = document.getElementById('health-bar');
         if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
@@ -340,7 +349,148 @@
     saveState();
   }
 
-  // wrap original functions (preserve original behaviour)
+  // ----------------------------
+  // Particle / effect functions
+  // ----------------------------
+  // helper: clear area each frame is done inside each effect to avoid cross-effects
+  // HEART BURST (for sendKiss)
+  function heartBurst(x = window.innerWidth/2, y = window.innerHeight/3){
+    if (!cctx) return;
+    const hearts = [];
+    const colors = ['#ff4f8b', '#ff8bb3', '#ff6fa1', '#ff2d6f'];
+    for (let i = 0; i < 18; i++) {
+      hearts.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 6,
+        vy: -Math.random() * 6 - 2,
+        size: 8 + Math.random() * 14,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 50 + Math.floor(Math.random() * 30),
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random()-0.5)*0.08
+      });
+    }
+
+    let t = 0;
+    const anim = setInterval(() => {
+      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
+      hearts.forEach(h => {
+        h.x += h.vx;
+        h.y += h.vy;
+        h.vy += 0.18;
+        h.rot += h.rotSpeed;
+        h.life--;
+        // draw heart via path (simple stylized)
+        const s = h.size;
+        cctx.save();
+        cctx.translate(h.x, h.y);
+        cctx.rotate(h.rot);
+        cctx.fillStyle = h.color;
+        cctx.beginPath();
+        cctx.moveTo(0, -s*0.6);
+        cctx.bezierCurveTo(-s, -s*1.3, -s*1.2, s*0.2, 0, s);
+        cctx.bezierCurveTo(s*1.2, s*0.2, s, -s*1.3, 0, -s*0.6);
+        cctx.closePath();
+        cctx.fill();
+        cctx.restore();
+      });
+      t++;
+      if (hearts.every(h => h.life <= 0) || t > 120) {
+        clearInterval(anim);
+        cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
+      }
+    }, 16);
+  }
+
+  // FOOD BURST (for feedPet) — emoji particles
+  function foodBurst(x = window.innerWidth/2, y = window.innerHeight/3){
+    if (!cctx) return;
+    const foods = ["🍔", "🍟", "🍕"];
+    const parts = [];
+    for (let i = 0; i < 14; i++) {
+      parts.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: -Math.random() * 6 - 2,
+        size: 20 + Math.random() * 22,
+        emoji: foods[Math.floor(Math.random() * foods.length)],
+        life: 40 + Math.random() * 30,
+        rot: (Math.random()-0.5)*0.6
+      });
+    }
+    let t = 0;
+    const anim = setInterval(() => {
+      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
+      parts.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.25;
+        p.rot += 0.02;
+        p.life--;
+        cctx.save();
+        cctx.translate(p.x, p.y);
+        cctx.rotate(p.rot);
+        cctx.font = `${p.size}px serif`;
+        cctx.textAlign = 'center';
+        cctx.textBaseline = 'middle';
+        cctx.fillText(p.emoji, 0, 0);
+        cctx.restore();
+      });
+      t++;
+      if (parts.every(p => p.life <= 0) || t > 120) {
+        clearInterval(anim);
+        cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
+      }
+    }, 16);
+  }
+
+  // SPARKLE BURST (for petPet) — small glowing circles
+  function sparkleBurst(x = window.innerWidth/2, y = window.innerHeight/3){
+    if (!cctx) return;
+    const parts = [];
+    const colors = ['#ffffff', '#ffe6f2', '#ff8ccd'];
+    for (let i = 0; i < 28; i++) {
+      parts.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 5,
+        vy: (Math.random() - 0.5) * 5 - 1,
+        size: 1 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 30 + Math.random() * 30,
+        glow: 0.6 + Math.random()*0.8
+      });
+    }
+    let t = 0;
+    const anim = setInterval(() => {
+      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
+      parts.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.03;
+        p.life--;
+        // draw glow by radial gradient
+        const g = cctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size*3);
+        g.addColorStop(0, p.color);
+        g.addColorStop(0.6, p.color);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        cctx.globalAlpha = Math.max(0, p.life/50);
+        cctx.fillStyle = g;
+        cctx.beginPath();
+        cctx.arc(p.x, p.y, p.size*2.2, 0, Math.PI*2);
+        cctx.fill();
+        cctx.globalAlpha = 1;
+      });
+      t++;
+      if (parts.every(p => p.life <= 0) || t > 120) {
+        clearInterval(anim);
+        cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
+      }
+    }, 16);
+  }
+
+  // ----------------------------
+  // Preserve originals and wrap them (no changes inside original functions)
+  // ----------------------------
   const origFeed = window.feedPet.bind(window);
   const origPet  = window.petPet.bind(window);
   const origKiss = window.sendKiss.bind(window);
@@ -351,6 +501,10 @@
     if (typeof health === 'number') state.health = health;
     // play sfx
     playSFX(sFeed);
+    // show food burst around avatar center
+    // try to position near avatar element center
+    const rect = petDisplay.getBoundingClientRect();
+    foodBurst(rect.left + rect.width/2, rect.top + rect.height/2);
     updateLastInteraction();
     saveState();
   };
@@ -359,6 +513,8 @@
     origPet(...args);
     if (typeof health === 'number') state.health = health;
     playSFX(sPet);
+    const rect = petDisplay.getBoundingClientRect();
+    sparkleBurst(rect.left + rect.width/2, rect.top + rect.height/2);
     updateLastInteraction();
     saveState();
   };
@@ -367,6 +523,8 @@
     origKiss(...args);
     if (typeof health === 'number') state.health = health;
     playSFX(sKiss);
+    const rect = petDisplay.getBoundingClientRect();
+    heartBurst(rect.left + rect.width/2, rect.top + rect.height/2 - 10);
     updateLastInteraction();
     saveState();
   };
@@ -388,7 +546,7 @@
   saveState();
 
 })();
-</script>
+  </script>
 
 </body>
 </html>
