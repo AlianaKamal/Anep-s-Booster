@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Mood Booster</title>
 
     <style>
@@ -215,25 +215,26 @@
 
 </script>
 
-  <!-- ===== Integration Block (ADDED) — localStorage, confetti, audio, combo/XP, legacy petState support ===== -->
+  <!-- ===== Integration Block (ADDED) — localStorage, confetti, audio, combo/XP (guarded) ===== -->
   <script>
-/* Integration layer — keeps audio + save/XP/confetti and now includes legacy petState support plus lastInteraction */
+/* Integration layer — keeps audio + save/XP/confetti but guards UI hooks that were removed */
 if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function') {
 
   const STORAGE_KEY = 'petState_v2';
-  const LEGACY_KEY  = 'petState';
   const state = {
     health: (typeof health === 'number') ? health : 100,
     xp: Number(localStorage.getItem('pet_xp') || 0),
     level: Number(localStorage.getItem('pet_level') || 1),
     lastClaim: localStorage.getItem('pet_lastClaim') || null,
-    lastInteraction: localStorage.getItem('pet_lastInteraction') || null,
     mute: (localStorage.getItem('pet_mute') === '1'),
   };
   if (typeof window.health === 'number') state.health = window.health;
 
-  // UI refs (safe guards: some extras removed)
-  const levelBadge = document.getElementById('levelBadge'); // may be null
+  // UI refs (these elements were removed from DOM, so check existence)
+  const dailyBtn = document.getElementById('dailyBtn');       // likely null
+  const soundToggle = document.getElementById('soundToggle'); // likely null
+  const levelBadge = document.getElementById('levelBadge');   // likely null
+  const snapshotBtn = document.getElementById('snapshotBtn'); // likely null
 
   const REWARDS = [
     { id:'candy', name:'Candy', health: 12, xp: 12, icon: '🍬' },
@@ -242,19 +243,17 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   ];
 
   // save/load helpers
-  function saveState_v2(){
+  function saveState(){
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ health: state.health, xp: state.xp, level: state.level, lastClaim: state.lastClaim, lastInteraction: state.lastInteraction }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ health: state.health, xp: state.xp, level: state.level, lastClaim: state.lastClaim }));
       localStorage.setItem('pet_xp', String(state.xp));
       localStorage.setItem('pet_level', String(state.level));
       localStorage.setItem('pet_mute', state.mute ? '1' : '0');
-      localStorage.setItem('pet_lastInteraction', state.lastInteraction || '');
     } catch(e){
-      console.warn('saveState_v2 failed', e);
+      console.warn('saveState failed', e);
     }
   }
-
-  function loadStored_v2(){
+  (function loadStored(){
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       if (typeof saved.health === 'number') {
@@ -263,78 +262,14 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
         const hb = document.getElementById('health-bar');
         if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
       }
-      if (typeof saved.lastInteraction === 'string' && saved.lastInteraction) state.lastInteraction = saved.lastInteraction;
-      if (levelBadge && typeof saved.level === 'number') levelBadge.textContent = `Lvl ${saved.level}`;
+      // if levelBadge exists update it
+      if (levelBadge && typeof saved.level === 'number') {
+        levelBadge.textContent = `Lvl ${saved.level}`;
+      }
     } catch(e){
-      console.warn('loadStored_v2 failed', e);
+      console.warn('loadStored failed', e);
     }
-  }
-
-  // initial load v2
-  loadStored_v2();
-
-  /* --- LEGACY petState compatibility + lastImage/status persistence --- */
-  function getFileNameFromSrc(src){
-    try {
-      if(!src) return '';
-      return src.split('/').pop().split('?')[0].split('#')[0];
-    } catch(e){ return src || ''; }
-  }
-
-  try {
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '{}');
-    if (legacy && typeof legacy === 'object') {
-      if (legacy.health !== undefined && !isNaN(Number(legacy.health))) {
-        state.health = Number(legacy.health);
-        if (typeof window.health !== 'undefined') window.health = state.health;
-        const hb = document.getElementById('health-bar');
-        if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
-      }
-
-      if (legacy.lastImage) {
-        // attempt to restore last image (filename or path)
-        try {
-          if (typeof changeImage === 'function') {
-            // If legacy stored only filename and images in same folder, this will work.
-            changeImage(legacy.lastImage);
-          }
-        } catch(e){}
-      }
-
-      if (legacy.status) {
-        try {
-          if (typeof updatePetStatus === 'function') {
-            updatePetStatus(legacy.status);
-          } else {
-            const sm = document.getElementById('status-message');
-            if (sm) sm.textContent = legacy.status;
-          }
-        } catch(e){}
-      }
-    }
-  } catch(e){ console.warn('failed to parse legacy petState', e); }
-
-  /* --- Enhance saveState: call v2 saver and also write legacy petState key (lastImage/status) --- */
-  function writeLegacyPetState(){
-    try {
-      const payload = {
-        health: state.health,
-        lastImage: (typeof petDisplay !== 'undefined' && petDisplay.src) ? getFileNameFromSrc(petDisplay.src) : '',
-        status: (typeof statusMessage !== 'undefined' && statusMessage.textContent) ? statusMessage.textContent : '',
-        lastSaved: new Date().toISOString()
-      };
-      localStorage.setItem(LEGACY_KEY, JSON.stringify(payload));
-    } catch(e){
-      console.warn('writing legacy petState failed', e);
-    }
-  }
-
-  function saveState(){
-    // primary v2 save
-    saveState_v2();
-    // write legacy-friendly object too
-    writeLegacyPetState();
-  }
+  })();
 
   // AUDIO SETUP — keep using your existing file names (change paths if in folder)
   const sFeed = new Audio('sfxeat.mp3.wav');   // feed
@@ -344,6 +279,11 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   [sFeed, sPet, sKiss].forEach(a => { a.preload = 'auto'; a.volume = 0.9; });
 
   function playSound(audio) { if (state.mute) return; try { audio.currentTime = 0; audio.play().catch(()=>{}); } catch(e){} }
+
+  // refresh UI for sound toggle only if control exists
+  function refreshSoundToggleUI(){ if (!soundToggle) return; soundToggle.textContent = state.mute ? '🔇 Off' : '🔊 On'; soundToggle.style.background = state.mute ? '#999' : '#28a745'; }
+  refreshSoundToggleUI();
+  if (soundToggle) soundToggle.addEventListener('click', ()=>{ state.mute = !state.mute; localStorage.setItem('pet_mute', state.mute ? '1' : '0'); refreshSoundToggleUI(); });
 
   // Confetti canvas
   const confCanvas = document.getElementById('confettiCanvas');
@@ -437,9 +377,7 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
 
   window.feedPet = function(...args){
     origFeed(...args);
-    // update state & save
     if (typeof window.health === 'number') state.health = window.health;
-    state.lastInteraction = new Date().toISOString();
     playSound(sFeed);
     burstConfetti();
     addXP(10);
@@ -450,7 +388,6 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   window.petPet = function(...args){
     origPet(...args);
     if (typeof window.health === 'number') state.health = window.health;
-    state.lastInteraction = new Date().toISOString();
     playSound(sPet);
     addXP(7);
     saveState();
@@ -459,14 +396,57 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   window.sendKiss = function(...args){
     origKiss(...args);
     if (typeof window.health === 'number') state.health = window.health;
-    state.lastInteraction = new Date().toISOString();
     playSound(sKiss);
     burstConfetti();
     addXP(4);
     saveState();
   };
 
-  // setInterval auto-save (v2) as safeguard
+  // If dailyBtn exists (it doesn't in this HTML) register listener
+  if (dailyBtn) {
+    dailyBtn.addEventListener('click', ()=>{
+      const today = new Date().toISOString().slice(0,10);
+      if (state.lastClaim === today){
+        alert('Anda sudah tuntut Daily Snack hari ini!');
+        return;
+      }
+      state.lastClaim = today;
+      const reward = REWARDS[Math.floor(Math.random()*REWARDS.length)];
+      state.health = Math.min(100, state.health + reward.health);
+      if (typeof window.health !== 'undefined') window.health = state.health;
+      if (typeof window.updatePetStatus === 'function') window.updatePetStatus(`${reward.name}! +${reward.health} 🎁`);
+      showRewardVisual(reward);
+      burstConfetti();
+      addXP(reward.xp);
+      saveState();
+    });
+  }
+
+  // If snapshot control exists (not in this HTML) register listener
+  if (snapshotBtn) {
+    snapshotBtn.addEventListener('click', async ()=>{
+      try {
+        const petImg = document.getElementById('pet-display');
+        if (!petImg) throw 'No pet image';
+        const c = document.createElement('canvas');
+        c.width = petImg.naturalWidth || 300;
+        c.height = petImg.naturalHeight || 300;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+        ctx.drawImage(petImg, 0, 0, c.width, c.height);
+        ctx.fillStyle = '#000'; ctx.font = '18px sans-serif';
+        ctx.fillText(`Health: ${state.health}%`, 10, c.height - 30);
+        ctx.fillText(`Level: ${state.level}`, 10, c.height - 10);
+        const url = c.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url; a.download = `pet_snapshot_${new Date().toISOString().slice(0,10)}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+      } catch (e){
+        alert('Snapshot failed: ' + e);
+      }
+    });
+  }
+
   setInterval(saveState, 5000);
   window.addEventListener('beforeunload', saveState);
 
