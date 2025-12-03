@@ -43,7 +43,7 @@
         right: 12px;
         top: 12px;
         background: transparent;
-        border: 2px solid rgba(255,255,255,0.18);
+        border: 2px solid rgba(255,255,255,0.12);
         padding: 8px 10px;
         border-radius: 10px;
         cursor: pointer;
@@ -248,10 +248,10 @@
 
 </script>
 
-  <!-- ===== Integration Block (ADDED) — localStorage: health, lastInteraction, theme ===== -->
+  <!-- ===== Integration Block (ADDED) — localStorage: health, lastInteraction, theme + audio + wrappers ===== -->
   <script>
-/* Integration layer — adds persistence for health, lastInteraction and theme.
-   DOES NOT change internals of original functions; wraps them to update state + save. */
+/* Integration layer — adds persistence for health, lastInteraction and theme; and audio SFX.
+   Does NOT change internals of original functions; wraps them to play audio + update state + save. */
 (function(){
   if (!(typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function')) {
     console.warn('Integration skipped: original functions not found.');
@@ -267,6 +267,20 @@
     lastInteraction: localStorage.getItem('pet_lastInteraction') || null,
     theme: localStorage.getItem('pet_theme') || 'light'
   };
+
+  // AUDIO SETUP — uses your existing filenames (place files in same folder or adjust paths)
+  const sFeed = new Audio('sfxeat.mp3.wav');   // feed
+  const sPet  = new Audio('sfxpurr.mp3.wav');  // pet / cute human-like
+  const sKiss = new Audio('sfxkiss.mp3.wav');  // kiss
+
+  [sFeed, sPet, sKiss].forEach(a => { a.preload = 'auto'; a.volume = 0.9; });
+
+  function playSFX(audio){
+    try {
+      audio.currentTime = 0;
+      audio.play().catch(()=>{});
+    } catch(e){}
+  }
 
   // Apply theme
   function applyTheme(t){
@@ -328,6 +342,8 @@
     origFeed(...args);
     // sync health from global if available
     if (typeof window.health === 'number') state.health = window.health;
+    // play sfx
+    playSFX(sFeed);
     updateLastInteraction();
     saveState();
   };
@@ -335,6 +351,7 @@
   window.petPet = function(...args){
     origPet(...args);
     if (typeof window.health === 'number') state.health = window.health;
+    playSFX(sPet);
     updateLastInteraction();
     saveState();
   };
@@ -342,6 +359,7 @@
   window.sendKiss = function(...args){
     origKiss(...args);
     if (typeof window.health === 'number') state.health = window.health;
+    playSFX(sKiss);
     updateLastInteraction();
     saveState();
   };
