@@ -175,8 +175,28 @@
     // Pastikan imej awal adalah normal
     changeImage('ratna_normal.png');
 
+    // load state
+const saved = JSON.parse(localStorage.getItem('petState') || '{}');
+if (saved.health !== undefined) health = saved.health;
+if (saved.lastImage) changeImage(saved.lastImage);
+updatePetStatus(saved.status || "Hai Anep! Jaga Titew baik-baik ya! 😊");
+
+// save state function
+function saveState() {
+  localStorage.setItem('petState', JSON.stringify({
+    health, lastImage: getFileNameFromSrc(petDisplay.src), status: statusMessage.textContent,
+    lastSaved: new Date().toISOString()
+  }));
+}
+
+// call saveState setiap kali ada interaction
+function feedPet(){ /*...*/ saveState(); }
+function petPet(){ /*...*/ saveState(); }
+function sendKiss(){ /*...*/ saveState(); }
+
 </script>
 </body>
 </html>
+
 
 
