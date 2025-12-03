@@ -248,11 +248,10 @@
 
 </script>
 
-  <!-- Integration Block (UPDATED + Particle Effects) -->
+  <!-- Integration Block (UPDATED + Particle Effects + write pet_lastAction) -->
   <script>
-/* Integration layer — persistence, audio SFX, and 3 particle effects:
-   heartBurst (kiss), foodBurst (feed), sparkleBurst (pet).
-   Does not alter original function internals; wraps them. */
+/* Integration layer — persistence, audio SFX, and 3 particle effects.
+   Also writes pet_lastAction to localStorage on every user action (source:'index'). */
 (function(){
   if (!(typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function')) {
     console.warn('Integration skipped: original functions not found.');
@@ -289,7 +288,6 @@
   // Resize canvas properly
   function resizeCanvas(){
     if(!cctx || !confCanvas) return;
-    // set displayed size
     confCanvas.width = window.innerWidth;
     confCanvas.height = window.innerHeight;
   }
@@ -352,8 +350,6 @@
   // ----------------------------
   // Particle / effect functions
   // ----------------------------
-  // helper: clear area each frame is done inside each effect to avoid cross-effects
-  // HEART BURST (for sendKiss)
   function heartBurst(x = window.innerWidth/2, y = window.innerHeight/3){
     if (!cctx) return;
     const hearts = [];
@@ -380,7 +376,6 @@
         h.vy += 0.18;
         h.rot += h.rotSpeed;
         h.life--;
-        // draw heart via path (simple stylized)
         const s = h.size;
         cctx.save();
         cctx.translate(h.x, h.y);
@@ -402,7 +397,6 @@
     }, 16);
   }
 
-  // FOOD BURST (for feedPet) — emoji particles
   function foodBurst(x = window.innerWidth/2, y = window.innerHeight/3){
     if (!cctx) return;
     const foods = ["🍔", "🍟", "🍕"];
@@ -444,7 +438,6 @@
     }, 16);
   }
 
-  // SPARKLE BURST (for petPet) — small glowing circles
   function sparkleBurst(x = window.innerWidth/2, y = window.innerHeight/3){
     if (!cctx) return;
     const parts = [];
@@ -468,7 +461,6 @@
         p.y += p.vy;
         p.vy += 0.03;
         p.life--;
-        // draw glow by radial gradient
         const g = cctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size*3);
         g.addColorStop(0, p.color);
         g.addColorStop(0.6, p.color);
@@ -502,9 +494,19 @@
     // play sfx
     playSFX(sFeed);
     // show food burst around avatar center
-    // try to position near avatar element center
     const rect = petDisplay.getBoundingClientRect();
     foodBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+
+    // write minimal entry so dev.html can pick it up (source: 'index')
+    try {
+      localStorage.setItem('pet_lastAction', JSON.stringify({
+        source: 'index',
+        action: 'feedPet',
+        amount: 15,
+        ts: new Date().toISOString()
+      }));
+    } catch(e){}
+
     updateLastInteraction();
     saveState();
   };
@@ -515,6 +517,16 @@
     playSFX(sPet);
     const rect = petDisplay.getBoundingClientRect();
     sparkleBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+
+    try {
+      localStorage.setItem('pet_lastAction', JSON.stringify({
+        source: 'index',
+        action: 'petPet',
+        amount: 10,
+        ts: new Date().toISOString()
+      }));
+    } catch(e){}
+
     updateLastInteraction();
     saveState();
   };
@@ -525,6 +537,16 @@
     playSFX(sKiss);
     const rect = petDisplay.getBoundingClientRect();
     heartBurst(rect.left + rect.width/2, rect.top + rect.height/2 - 10);
+
+    try {
+      localStorage.setItem('pet_lastAction', JSON.stringify({
+        source: 'index',
+        action: 'sendKiss',
+        amount: 5,
+        ts: new Date().toISOString()
+      }));
+    } catch(e){}
+
     updateLastInteraction();
     saveState();
   };
