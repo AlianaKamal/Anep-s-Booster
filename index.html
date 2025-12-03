@@ -248,9 +248,9 @@
 
 </script>
 
-  <!-- ===== Integration Block (ADDED) — localStorage: health, lastInteraction, theme + audio + wrappers ===== -->
+  <!-- Integration Block (UPDATED) — persist health correctly (reads/writes real `health` variable) -->
   <script>
-/* Integration layer — adds persistence for health, lastInteraction and theme; and audio SFX.
+/* Integration layer — updated to persist the real `health` variable (not window.health only).
    Does NOT change internals of original functions; wraps them to play audio + update state + save. */
 (function(){
   if (!(typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function')) {
@@ -262,7 +262,9 @@
   const lastEl = document.getElementById('last-interaction');
   const themeBtn = document.getElementById('themeToggle');
 
+  // Use the actual global `health` variable if present; fallback to 100
   const state = {
+    // prefer the real health variable if exists
     health: (typeof health === 'number') ? health : 100,
     lastInteraction: localStorage.getItem('pet_lastInteraction') || null,
     theme: localStorage.getItem('pet_theme') || 'light'
@@ -291,9 +293,11 @@
   }
   applyTheme(state.theme);
 
-  // Save minimal state
+  // Save minimal state (always read from real `health` variable)
   function saveState(){
     try {
+      // read current real health variable if exists
+      if (typeof health === 'number') state.health = health;
       const payload = { health: state.health, lastInteraction: state.lastInteraction, theme: state.theme };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       localStorage.setItem('pet_lastInteraction', state.lastInteraction || '');
@@ -302,7 +306,7 @@
     }
   }
 
-  // Load saved state (health + lastInteraction + theme)
+  // Load saved state (health + lastInteraction + theme) and apply to real `health`
   (function loadStored(){
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -310,7 +314,10 @@
       const parsed = JSON.parse(raw || '{}');
       if (typeof parsed.health === 'number') {
         state.health = parsed.health;
-        if (typeof window.health !== 'undefined') window.health = state.health;
+        // write into the real global 'health' variable (used by original script)
+        try { health = state.health; } catch(e){ /* silent */ }
+        // also set window.health for compatibility
+        try { window.health = state.health; } catch(e){}
         const hb = document.getElementById('health-bar');
         if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
       }
@@ -340,8 +347,8 @@
 
   window.feedPet = function(...args){
     origFeed(...args);
-    // sync health from global if available
-    if (typeof window.health === 'number') state.health = window.health;
+    // sync from real health variable to state
+    if (typeof health === 'number') state.health = health;
     // play sfx
     playSFX(sFeed);
     updateLastInteraction();
@@ -350,7 +357,7 @@
 
   window.petPet = function(...args){
     origPet(...args);
-    if (typeof window.health === 'number') state.health = window.health;
+    if (typeof health === 'number') state.health = health;
     playSFX(sPet);
     updateLastInteraction();
     saveState();
@@ -358,7 +365,7 @@
 
   window.sendKiss = function(...args){
     origKiss(...args);
-    if (typeof window.health === 'number') state.health = window.health;
+    if (typeof health === 'number') state.health = health;
     playSFX(sKiss);
     updateLastInteraction();
     saveState();
@@ -381,7 +388,7 @@
   saveState();
 
 })();
-  </script>
+</script>
 
 </body>
 </html>
