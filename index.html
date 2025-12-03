@@ -1,190 +1,332 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Mood Booster — Daily Fun (Testable)</title>
-    <style>
-        body{background:#ffe4e1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;overflow:hidden}
-        .container{background:#fff;padding:20px;border-radius:20px;box-shadow:0 4px 15px rgba(0,0,0,0.15);max-width:420px;width:92%;text-align:center}
-        #pet-display{width:150px;height:150px;border-radius:50%;object-fit:cover;margin:8px auto;border:4px solid #ff69b4;transition:transform .3s,border-color .25s}
-        .meter{width:100%;background:#f0f0f0;border-radius:6px;margin:10px 0}
-        .progress{height:26px;width:50%;background:#ff1493;border-radius:6px;line-height:26px;color:#fff;font-weight:700;transition:width .45s}
-        .buttons{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
-        button{padding:10px 12px;background:#ff69b4;color:#fff;border:none;border-radius:8px;cursor:pointer}
-        #dailyBtn{background:linear-gradient(90deg,#ff69b4,#ff1493);position:relative}
-        #dailyBtn.pulse{animation:pulse 1.8s infinite}
-        @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,20,147,.18)}70%{transform:scale(1.03);box-shadow:0 0 0 8px rgba(255,20,147,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,20,147,0)}}
-        #rewardPopup{position:fixed;left:50%;top:24%;transform:translate(-50%,-50%) scale(.8);background:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:transform .3s,opacity .25s;z-index:2000;display:flex;gap:10px;align-items:center}
-        #rewardPopup.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
-        #confettiCanvas{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1500}
-        .small{font-size:.85rem;color:#666;margin-top:6px}
-        #testControls{margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-        .muted{background:#ddd;color:#444}
-    </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mood Booster — Streak & Skins</title>
+<style>
+    body{background:#ffe4e1;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;overflow:hidden}
+    .container{background:#fff;padding:18px;border-radius:16px;box-shadow:0 6px 22px rgba(0,0,0,0.12);max-width:420px;width:94%;text-align:center}
+    #pet-display{width:150px;height:150px;border-radius:50%;object-fit:cover;margin:8px auto;border:4px solid #ff69b4;transition:transform .25s,border-color .25s}
+    h1{font-size:1.1rem;margin:6px 0}
+    .meter{width:100%;background:#f0f0f0;border-radius:8px;margin:10px 0}
+    .progress{height:26px;width:50%;background:#ff1493;border-radius:8px;line-height:26px;color:#fff;font-weight:700;transition:width .45s}
+    .small{font-size:.88rem;color:#555;margin:6px 0}
+    .buttons{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+    button{padding:10px 12px;background:#ff69b4;color:#fff;border:none;border-radius:8px;cursor:pointer}
+    #dailyBtn{background:linear-gradient(90deg,#ff69b4,#ff1493)}
+    #dailyBtn.pulse{animation:pulse 1.8s infinite}
+    @keyframes pulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,20,147,.18)}70%{transform:scale(1.03);box-shadow:0 0 0 8px rgba(255,20,147,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,20,147,0)}}
+    #rewardPopup{position:fixed;left:50%;top:20%;transform:translate(-50%,-50%) scale(.85);background:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:transform .28s,opacity .22s;z-index:2200;display:flex;gap:12px;align-items:center}
+    #rewardPopup.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+    #confettiCanvas{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1500}
+    .controls{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:8px}
+    select{padding:8px;border-radius:8px;border:1px solid #eee}
+    .muted{background:#eee;color:#444}
+    .meta-row{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:8px}
+    .meta {background:#fafafa;padding:6px 8px;border-radius:8px;font-size:.85rem;color:#333}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Hi B (B for Brader)</h1>
-        <img id="pet-display" src="ratna_normal.png" alt="Pet">
-        <div class="meter"><div id="health-bar" class="progress">Kesihatan</div></div>
-        <div id="status-message">Hai Anep!</div>
-        <div id="last-interaction" class="small">Last interaction: —</div>
-        <div id="streak-display" class="small">Streak: 0 hari 🔥</div>
+<div class="container">
+    <h1>Hi B (B for Brader)</h1>
+    <img id="pet-display" src="ratna_normal.png" alt="Pet">
+    <div class="meter"><div id="health-bar" class="progress">Kesihatan</div></div>
 
-        <div class="buttons">
-            <button onclick="feedPet()">Beri Makan 🍔</button>
-            <button onclick="petPet()">Pujuk 🤗</button>
-            <button onclick="sendKiss()">Send Kiss 😘</button>
-            <button id="dailyBtn" class="pulse" onclick="claimDaily()">Daily Snack 🎁</button>
-        </div>
+    <div id="status-message" class="small">Hai Anep!</div>
+    <div id="last-interaction" class="small">Last interaction: —</div>
 
-        <div id="testControls" class="small">
-            <!-- Butang ujian: terus tuntut tanpa semak tarikh -->
-            <button id="forceClaimBtn" style="background:#39a0ff">Force Claim (Test)</button>
-            <button id="resetLastClaim" class="muted">Reset Last Claim</button>
-            <button id="clearAll" class="muted">Clear State</button>
-        </div>
-
-        <div id="daily-note" class="small"></div>
+    <div class="meta-row">
+        <div id="streak-display" class="meta">Streak: 0 hari 🔥</div>
+        <div id="maxstreak-display" class="meta">Rekod: 0</div>
+        <div id="next-milestone" class="meta">Next milestone: 7</div>
     </div>
 
-    <div id="rewardPopup" aria-hidden="true"><div style="font-size:1.4rem;color:#ff1493;font-weight:700">+20</div><div><div style="font-weight:700">Daily Snack!</div><div style="font-size:.9rem;color:#666">Streak: <span id="popup-streak">0</span> hari</div></div></div>
-    <canvas id="confettiCanvas"></canvas>
+    <div class="buttons">
+        <button onclick="feedPet()">Beri Makan 🍔</button>
+        <button onclick="petPet()">Pujuk 🤗</button>
+        <button onclick="sendKiss()">Send Kiss 😘</button>
+        <button id="dailyBtn" class="pulse" onclick="claimDaily()">Daily Snack 🎁</button>
+    </div>
 
-    <audio id="sfxClaim" src="sfx/claim.mp3" preload="auto"></audio>
-    <audio id="sfxPop" src="sfx/pop.mp3" preload="auto"></audio>
+    <div class="controls" style="margin-top:8px">
+        <label for="skinSelect" style="font-size:.9rem;color:#444">Pakai skin:</label>
+        <select id="skinSelect"><option value="default">Default</option></select>
+        <button id="forceClaimBtn" class="muted">Force Claim (Test)</button>
+        <button id="resetLastClaim" class="muted">Reset Last Claim</button>
+    </div>
+
+    <div id="daily-note" class="small"></div>
+</div>
+
+<div id="rewardPopup" aria-hidden="true">
+    <div style="font-size:1.4rem;color:#ff1493;font-weight:700">+20</div>
+    <div>
+        <div style="font-weight:700">Daily Snack!</div>
+        <div style="font-size:.9rem;color:#666">Streak: <span id="popup-streak">0</span> hari</div>
+    </div>
+</div>
+
+<canvas id="confettiCanvas"></canvas>
+
+<audio id="sfxClaim" src="sfx/claim.mp3" preload="auto"></audio>
+<audio id="sfxPop" src="sfx/pop.mp3" preload="auto"></audio>
 
 <script>
-/* ----- kept app state ----- */
+/* ---------------- kept base state ---------------- */
 const petDisplay = document.getElementById('pet-display');
 const statusMessage = document.getElementById('status-message');
 const healthBar = document.getElementById('health-bar');
 const lastInteractionEl = document.getElementById('last-interaction');
 const streakDisplay = document.getElementById('streak-display');
+const maxstreakDisplay = document.getElementById('maxstreak-display');
+const nextMilestoneEl = document.getElementById('next-milestone');
 const dailyNote = document.getElementById('daily-note');
 const dailyBtn = document.getElementById('dailyBtn');
 const rewardPopup = document.getElementById('rewardPopup');
 const popupStreak = document.getElementById('popup-streak');
-
-const LAST_CLAIM_KEY = 'pet_lastClaimDate';
-const STREAK_KEY = 'pet_streakCount';
+const skinSelect = document.getElementById('skinSelect');
 
 let health = 100;
 let lastInteraction = null;
-let soundEnabled = true;
 
+/* keys */
+const LAST_CLAIM_KEY = 'pet_lastClaimDate';
+const STREAK_KEY = 'pet_streakCount';
+const MAXSTREAK_KEY = 'pet_maxStreak';
+const UNLOCKED_SKINS_KEY = 'pet_unlockedSkins';
+const SELECTED_SKIN_KEY = 'pet_selectedSkin';
+const STATE_KEY = 'petState';
+
+// milestone skins mapping (milestone -> skinId)
+const MILESTONES = [7,14,30];
+const SKIN_MAP = {
+    7: { id: 'skin7', name: 'Skin 7 Hari', prefix: 'ratna_skin7' },
+    14: { id: 'skin14', name: 'Skin 14 Hari', prefix: 'ratna_skin14' },
+    30: { id: 'skin30', name: 'Skin 30 Hari', prefix: 'ratna_skin30' }
+};
+
+/* sounds */
 const sfxClaim = document.getElementById('sfxClaim');
 const sfxPop = document.getElementById('sfxPop');
+let soundEnabled = true;
 
-/* ----- confetti minimal ----- */
-const cc = document.getElementById('confettiCanvas');
-const ctx = cc.getContext('2d');
-function resize(){ cc.width = innerWidth; cc.height = innerHeight; } window.addEventListener('resize', resize); resize();
-function burstConfetti(){
-    const parts=[]; const cols=['#ff69b4','#ff1493','#ffd700','#ffd1e6'];
-    for(let i=0;i<60;i++){ parts.push({x:innerWidth/2+(Math.random()-0.5)*160,y:innerHeight/3+(Math.random()-0.5)*60,vx:(Math.random()-0.5)*8,vy:-(2+Math.random()*6),r:3+Math.random()*6,color:cols[Math.floor(Math.random()*cols.length)],rot:Math.random()*360,vr:(Math.random()-0.5)*6});}
-    let t=0; const anim=setInterval(()=>{ ctx.clearRect(0,0,cc.width,cc.height); for(const p of parts){ p.x+=p.vx;p.y+=p.vy;p.vy+=0.18;p.rot+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle=p.color; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6); ctx.restore(); } t++; if(t>80){ clearInterval(anim); ctx.clearRect(0,0,cc.width,cc.height);} },16);
+/* confetti setup */
+const cc = document.getElementById('confettiCanvas'), ctx = cc.getContext('2d');
+function resizeCanvas(){ cc.width = innerWidth; cc.height = innerHeight; } window.addEventListener('resize', resizeCanvas); resizeCanvas();
+function burstConfetti(){ const parts=[]; const cols=['#ff69b4','#ff1493','#ffd700','#ffd1e6']; for(let i=0;i<60;i++){ parts.push({x:innerWidth/2+(Math.random()-0.5)*160,y:innerHeight/3+(Math.random()-0.5)*60,vx:(Math.random()-0.5)*8,vy:-(2+Math.random()*6),r:3+Math.random()*6,color:cols[Math.floor(Math.random()*cols.length)],rot:Math.random()*360,vr:(Math.random()-0.5)*6}); } let t=0; const anim=setInterval(()=>{ ctx.clearRect(0,0,cc.width,cc.height); for(const p of parts){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.18; p.rot+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle=p.color; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6); ctx.restore(); } t++; if(t>80){ clearInterval(anim); ctx.clearRect(0,0,cc.width,cc.height);} },16); }
+
+/* ---------------- helpers & storage ---------------- */
+function getFileNameFromSrc(src){ try{ const parts = src.split('/'); return parts[parts.length-1].split('?')[0].split('#')[0]; }catch(e){ return src; } }
+function changeImage(src){ petDisplay.src = src; }
+function saveState(){ try{ const state = { health, lastImage: getFileNameFromSrc(petDisplay.src || 'ratna_normal.png'), status: statusMessage.textContent || '', lastInteraction: lastInteraction || null }; localStorage.setItem(STATE_KEY, JSON.stringify(state)); }catch(e){} }
+function loadState(){ try{ const raw = localStorage.getItem(STATE_KEY); if(!raw) return; const s = JSON.parse(raw); if(s){ if(typeof s.health==='number') health = Math.max(0, Math.min(100, s.health)); if(s.lastImage) changeImage(s.lastImage); if(s.status) statusMessage.textContent = s.status; if(s.lastInteraction) lastInteraction = s.lastInteraction; } }catch(e){} }
+
+/* streak & maxstreak */
+function getStreak(){ return Number(localStorage.getItem(STREAK_KEY) || 0); }
+function setStreak(n){ localStorage.setItem(STREAK_KEY, String(n)); streakDisplay.textContent = `Streak: ${n} hari 🔥`; popupStreak.textContent = n; updateMaxStreak(n); updateNextMilestone(n); }
+function getMaxStreak(){ return Number(localStorage.getItem(MAXSTREAK_KEY) || 0); }
+function updateMaxStreak(candidate){ const cur = getMaxStreak(); if(candidate > cur){ localStorage.setItem(MAXSTREAK_KEY, String(candidate)); maxstreakDisplay.textContent = `Rekod: ${candidate}`; } else { maxstreakDisplay.textContent = `Rekod: ${cur}`; } }
+
+/* unlocked skins */
+function getUnlockedSkins(){ try{ return JSON.parse(localStorage.getItem(UNLOCKED_SKINS_KEY) || '[]'); }catch(e){ return []; } }
+function unlockSkin(skinId){
+    const arr = getUnlockedSkins();
+    if(!arr.includes(skinId)){ arr.push(skinId); localStorage.setItem(UNLOCKED_SKINS_KEY, JSON.stringify(arr)); populateSkinSelect(); showSkinUnlocked(skinId); burstConfetti(); try{ sfxPop.currentTime = 0; sfxPop.play().catch(()=>{}); }catch(e){} }
+}
+function populateSkinSelect(){
+    const arr = getUnlockedSkins();
+    // clear except default
+    skinSelect.innerHTML = '<option value="default">Default</option>';
+    for(const m of MILESTONES){
+        const s = SKIN_MAP[m];
+        if(arr.includes(s.id)){
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            skinSelect.appendChild(opt);
+        }
+    }
+    // restore selected skin if any
+    const sel = localStorage.getItem(SELECTED_SKIN_KEY) || 'default';
+    skinSelect.value = sel;
+    applySelectedSkin(sel);
+}
+function showSkinUnlocked(skinId){
+    // small popup via rewardPopup reuse (custom message)
+    rewardPopup.querySelector('.big').textContent = 'Unlocked!';
+    rewardPopup.querySelector('div div').textContent = 'Skin unlocked';
+    rewardPopup.classList.add('show');
+    setTimeout(()=>{ rewardPopup.classList.remove('show'); rewardPopup.querySelector('.big').textContent = '+20'; rewardPopup.querySelector('div div').textContent = ''; }, 1400);
+}
+function applySelectedSkin(id){
+    if(id === 'default'){
+        // revert to base filenames (we'll set to normal)
+        changeImage('ratna_normal.png');
+        localStorage.setItem(SELECTED_SKIN_KEY, 'default');
+        return;
+    }
+    // find skin mapping
+    const entry = Object.values(SKIN_MAP).find(s => s.id === id);
+    if(!entry){ changeImage('ratna_normal.png'); localStorage.setItem(SELECTED_SKIN_KEY,'default'); return; }
+    // expected filenames pattern: <prefix>_normal.png, <prefix>_makan.png, <prefix>_gembira.png, <prefix>_kiss.png
+    // we will set normal variant for now; other interactions also use prefix when toggling images
+    const normalFile = `${entry.prefix}_normal.png`;
+    changeImage(normalFile);
+    localStorage.setItem(SELECTED_SKIN_KEY, id);
 }
 
-/* ----- helpers ----- */
-function getFileNameFromSrc(src){ try{ const parts=src.split('/'); return parts[parts.length-1].split('?')[0].split('#')[0]; }catch(e){ return src; } }
-function changeImage(src){ petDisplay.src = src; }
-function saveState(){ try{ const state={health,lastImage:getFileNameFromSrc(petDisplay.src||'ratna_normal.png'),status:statusMessage.textContent||'',lastInteraction:lastInteraction||null}; localStorage.setItem('petState', JSON.stringify(state)); }catch(e){} }
-function loadState(){ try{ const raw=localStorage.getItem('petState'); if(!raw) return; const s=JSON.parse(raw); if(s){ if(typeof s.health==='number') health=Math.max(0,Math.min(100,s.health)); if(s.lastImage) changeImage(s.lastImage); if(s.status) statusMessage.textContent=s.status; if(s.lastInteraction) lastInteraction=s.lastInteraction; } }catch(e){} }
-
-/* ----- streak ----- */
-function getStreak(){ return Number(localStorage.getItem(STREAK_KEY) || 0); }
-function setStreak(n){ localStorage.setItem(STREAK_KEY,String(n)); streakDisplay.textContent = `Streak: ${n} hari 🔥`; popupStreak.textContent = n; }
-
-/* ----- last interaction UI ----- */
+/* lastInteraction display */
 function setLastInteractionNow(){ lastInteraction = new Date().toISOString(); }
-function updateLastInteractionDisplay(){ if(!lastInteraction){ lastInteractionEl.textContent='Last interaction: —'; return;} lastInteractionEl.textContent='Last interaction: '+ new Date(lastInteraction).toLocaleString(); }
+function updateLastInteractionDisplay(){ if(!lastInteraction){ lastInteractionEl.textContent = 'Last interaction: —'; return; } try{ lastInteractionEl.textContent = 'Last interaction: ' + (new Date(lastInteraction)).toLocaleString(); }catch(e){ lastInteractionEl.textContent = 'Last interaction: ' + lastInteraction; } }
 
-/* ----- daily availability ----- */
-function msUntilNextDayLocal(){ const now=new Date(); const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1); return tomorrow-now; }
+/* countdown to next local midnight */
+function msUntilNextDayLocal(){ const now = new Date(); const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); return tomorrow - now; }
 let countdownTimer = null;
-function startDailyCountdown(){ stopDailyCountdown(); function tick(){ const ms=msUntilNextDayLocal(); if(ms<=0){ dailyBtn.disabled=false; dailyBtn.classList.add('pulse'); dailyNote.textContent='Daily Snack tersedia. Tuntut sekali sehari.'; stopDailyCountdown(); return;} const sec=Math.floor(ms/1000); const h=Math.floor(sec/3600).toString().padStart(2,'0'); const m=Math.floor(sec%3600/60).toString().padStart(2,'0'); const s=Math.floor(sec%60).toString().padStart(2,'0'); dailyNote.textContent=`Daily sudah tuntut. Seterusnya dalam ${h}:${m}:${s}`; } tick(); countdownTimer=setInterval(tick,1000); }
-function stopDailyCountdown(){ if(countdownTimer){ clearInterval(countdownTimer); countdownTimer=null;} }
-function updateDailyAvailabilityUI(){ try{ const today=(new Date()).toISOString().slice(0,10); const lastClaim=localStorage.getItem(LAST_CLAIM_KEY); if(lastClaim===today){ dailyBtn.disabled=true; dailyBtn.classList.remove('pulse'); startDailyCountdown(); dailyNote.textContent='Daily Snack sudah dituntut hari ini.'; } else { dailyBtn.disabled=false; dailyBtn.classList.add('pulse'); dailyNote.textContent='Daily Snack tersedia. Tuntut sekali sehari.'; stopDailyCountdown(); } }catch(e){} }
+function startDailyCountdown(){ stopDailyCountdown(); function tick(){ const ms = msUntilNextDayLocal(); if(ms <= 0){ dailyBtn.disabled = false; dailyBtn.classList.add('pulse'); dailyNote.textContent = 'Daily Snack tersedia. Tuntut sekali sehari.'; stopDailyCountdown(); return; } const sec = Math.floor(ms/1000); const h = Math.floor(sec/3600).toString().padStart(2,'0'); const m = Math.floor(sec%3600/60).toString().padStart(2,'0'); const s = Math.floor(sec%60).toString().padStart(2,'0'); dailyNote.textContent = `Daily sudah tuntut. Seterusnya dalam ${h}:${m}:${s}`; } tick(); countdownTimer = setInterval(tick,1000); }
+function stopDailyCountdown(){ if(countdownTimer){ clearInterval(countdownTimer); countdownTimer = null; } }
 
-/* ----- reward popup ----- */
-function showRewardPopup(duration=1400){ rewardPopup.classList.add('show'); rewardPopup.setAttribute('aria-hidden','false'); if(soundEnabled) try{ sfxClaim.currentTime=0; sfxClaim.play().catch(()=>{}); }catch(e){} setTimeout(()=>{ rewardPopup.classList.remove('show'); rewardPopup.setAttribute('aria-hidden','true'); }, duration); }
+/* next milestone helper */
+function updateNextMilestone(currentStreak){
+    let next = MILESTONES.find(m => m > currentStreak) || MILESTONES[MILESTONES.length-1];
+    nextMilestoneEl.textContent = `Next milestone: ${next}`;
+}
 
-/* ----- claimDaily (normal) ----- */
+/* reward popup */
+function showRewardPopup(duration=1400){ rewardPopup.classList.add('show'); rewardPopup.setAttribute('aria-hidden','false'); if(soundEnabled) try{ sfxClaim.currentTime = 0; sfxClaim.play().catch(()=>{}); }catch(e){} setTimeout(()=>{ rewardPopup.classList.remove('show'); rewardPopup.setAttribute('aria-hidden','true'); }, duration); }
+
+/* ----------------- daily claim logic (with 1-day grace) ----------------- */
 function claimDaily(){
     try{
-        const today=(new Date()).toISOString().slice(0,10);
-        const lastClaim=localStorage.getItem(LAST_CLAIM_KEY);
-        if(lastClaim===today){ dailyNote.textContent='Anda sudah tuntut Daily Snack hari ini. Sila cuba esok.'; return; }
-        // streak logic
-        let streak=getStreak();
-        if(lastClaim){
-            const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1); const yStr=yesterday.toISOString().slice(0,10);
-            if(lastClaim===yStr) streak = streak + 1; else streak = 1;
-        } else { streak = 1; }
+        const today = (new Date()).toISOString().slice(0,10);
+        const lastClaim = localStorage.getItem(LAST_CLAIM_KEY); // e.g. '2025-12-03' or null
+        if(lastClaim === today){
+            dailyNote.textContent = 'Anda sudah tuntut Daily Snack hari ini. Sila cuba esok.';
+            return;
+        }
+        // compute yesterday & dayBeforeYesterday (local)
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); const yStr = yesterday.toISOString().slice(0,10);
+        const dayBefore = new Date(); dayBefore.setDate(dayBefore.getDate() - 2); const dbStr = dayBefore.toISOString().slice(0,10);
+
+        let streak = getStreak();
+        let usedGrace = false;
+
+        if(lastClaim === yStr){
+            // claimed yesterday => consecutive
+            streak = streak + 1;
+        } else if (lastClaim === dbStr){
+            // missed one day only => apply 1-day grace: do NOT reset streak (keep same), but do not increment either
+            usedGrace = true;
+            // streak unchanged
+        } else {
+            // missed more than 1 day or first claim => reset to 1
+            streak = 1;
+        }
+
+        // set streak & update
         setStreak(streak);
-        // reward
+
+        // update max streak handled inside setStreak
+        // reward: +20 health
         health = Math.min(100, health + 20);
         updatePetStatus('Daily Snack! +20 🎁');
+
+        // record claim date (today) and lastInteraction
         localStorage.setItem(LAST_CLAIM_KEY, today);
         setLastInteractionNow(); saveState(); updateLastInteractionDisplay();
-        showRewardPopup(); burstConfetti(); if(soundEnabled) try{sfxPop.currentTime=0; sfxPop.play().catch(()=>{});}catch(e){}
-        dailyBtn.disabled=true; dailyBtn.classList.remove('pulse'); startDailyCountdown();
-        dailyNote.textContent='Berjaya tuntut! Datang lagi esok.';
-    }catch(e){ console.warn(e); dailyNote.textContent='Tidak boleh tuntut sekarang.'; }
-}
 
-/* ----- FORCE CLAIM for testing (bypass date check) ----- */
-function forceClaimForTest(){
-    // This gives the same reward and UX but ignores lastClaim date. Useful for testing.
-    try{
-        let streak=getStreak();
-        // increment streak for testing (does not check continuity)
-        streak = streak + 1;
-        setStreak(streak);
-        health = Math.min(100, health + 20);
-        updatePetStatus('Daily Snack (Test)! +20 🎁');
-        setLastInteractionNow(); saveState(); updateLastInteractionDisplay();
-        showRewardPopup(); burstConfetti();
-        if(soundEnabled) try{sfxPop.currentTime=0; sfxPop.play().catch(()=>{});}catch(e){}
-        // do not alter LAST_CLAIM_KEY so normal flow remains unchanged; but if you want to mark claimed, uncomment next line:
-        // localStorage.setItem(LAST_CLAIM_KEY, (new Date()).toISOString().slice(0,10));
-        dailyNote.textContent='Force claim selesai (test).';
-    }catch(e){ console.warn(e); dailyNote.textContent='Force claim failed.'; }
-}
+        // UX: popup, confetti, sound
+        showRewardPopup();
+        burstConfetti();
+        try{ sfxPop.currentTime = 0; sfxPop.play().catch(()=>{}); }catch(e){}
 
-/* ----- other interactions ----- */
-function updatePetStatus(message){ statusMessage.textContent = message; healthBar.style.width = `${health}%`; healthBar.textContent = `${health}% Mood Titew`; if(health<30) statusMessage.style.color='red'; else statusMessage.style.color='#ff69b4'; saveState(); }
-function feedPet(){ health = Math.min(100, health + 15); updatePetStatus("Yummy! Masyeh Anep! 😋"); changeImage('ratna_makan.png'); petDisplay.style.transform='translateY(-10px)'; setTimeout(()=>petDisplay.style.transform='translateY(0px)',300); setLastInteractionNow(); saveState(); updateLastInteractionDisplay(); }
-function petPet(){ health = Math.min(100, health + 10); updatePetStatus("Ocey, Tak Majuk Dah! 🥰"); changeImage('ratna_gembira.png'); petDisplay.style.transform='rotate(-5deg)'; setTimeout(()=>{ petDisplay.style.transform='rotate(5deg)'; setTimeout(()=>petDisplay.style.transform='rotate(0deg)',100); },100); setLastInteractionNow(); saveState(); updateLastInteractionDisplay(); }
-function sendKiss(){ health = Math.min(100, health + 5); updatePetStatus("Muaahh! 💖"); changeImage('ratna_kiss.png'); petDisplay.style.transform='scale(1.2)'; petDisplay.style.borderColor='#FF0000'; setTimeout(()=>{ petDisplay.style.transform='scale(1)'; petDisplay.style.borderColor='#ff69b4'; },500); setLastInteractionNow(); saveState(); updateLastInteractionDisplay(); }
+        // disable daily button & start countdown
+        dailyBtn.disabled = true; dailyBtn.classList.remove('pulse');
+        startDailyCountdown();
 
-/* ----- decay ----- */
-setInterval(()=>{ health = Math.max(0, health - 2); if(health===0){ updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀"); changeImage('ratna_normal.png'); } else { updatePetStatus("Nak attention pwiss! 🥺"); if(!petDisplay.src.includes('ratna_normal.png') && !petDisplay.src.includes('ratna_makan.png') && !petDisplay.src.includes('ratna_gembira.png') && !petDisplay.src.includes('ratna_kiss.png')) changeImage('ratna_normal.png'); } }, 3000);
+        // message for user about grace usage
+        if(usedGrace){
+            dailyNote.textContent = 'Anda guna grace 1 hari — streak dikekalkan. Tuntut esok untuk teruskan streak.';
+        } else {
+            dailyNote.textContent = 'Berjaya tuntut! Datang lagi esok.';
+        }
 
-/* ----- test control handlers ----- */
-document.getElementById('forceClaimBtn').addEventListener('click', ()=>{ forceClaimForTest(); });
-document.getElementById('resetLastClaim').addEventListener('click', ()=>{
-    localStorage.removeItem(LAST_CLAIM_KEY);
-    dailyNote.textContent = 'Last claim reset. Daily boleh dituntut sekarang.';
-    updateDailyAvailabilityUI();
-});
-document.getElementById('clearAll').addEventListener('click', ()=>{
-    if(confirm('Clear semua state (health, streak, last claim, saved state)?')) {
-        localStorage.removeItem('petState');
-        localStorage.removeItem(LAST_CLAIM_KEY);
-        localStorage.removeItem(STREAK_KEY);
-        location.reload();
+        // check milestone unlock
+        checkMilestones(streak);
+    } catch(e){
+        console.warn(e);
+        dailyNote.textContent = 'Tidak boleh tuntut sekarang.';
     }
-});
+}
 
-/* ----- init on load ----- */
+/* check milestone & unlock */
+function checkMilestones(currentStreak){
+    for(const m of MILESTONES){
+        if(currentStreak === m){
+            const skinEntry = SKIN_MAP[m];
+            if(skinEntry) unlockSkin(skinEntry.id);
+        }
+    }
+    // update max streak display (ensured by setStreak)
+    updateMaxStreak(currentStreak);
+}
+
+/* ---------------- original interactions (kept) ---------------- */
+function updatePetStatus(message){
+    statusMessage.textContent = message;
+    healthBar.style.width = `${health}%`;
+    healthBar.textContent = `${health}% Mood Titew`;
+    if(health < 30) statusMessage.style.color = 'red'; else statusMessage.style.color = '#ff69b4';
+    saveState();
+}
+function feedPet(){ health = Math.min(100, health + 15); updatePetStatus("Yummy! Masyeh Anep! 😋"); // image selection respects selectedSkin
+    const sel = localStorage.getItem(SELECTED_SKIN_KEY) || 'default';
+    if(sel==='default') changeImage('ratna_makan.png'); else { const e = Object.values(SKIN_MAP).find(s=>s.id===sel); changeImage(e ? `${e.prefix}_makan.png` : 'ratna_makan.png'); }
+    petDisplay.style.transform = 'translateY(-10px)'; setTimeout(()=>petDisplay.style.transform='translateY(0px)',300); setLastInteractionNow(); saveState(); updateLastInteractionDisplay(); }
+function petPet(){ health = Math.min(100, health + 10); updatePetStatus("Ocey, Tak Majuk Dah! 🥰"); const sel = localStorage.getItem(SELECTED_SKIN_KEY) || 'default'; if(sel==='default') changeImage('ratna_gembira.png'); else { const e = Object.values(SKIN_MAP).find(s=>s.id===sel); changeImage(e ? `${e.prefix}_gembira.png` : 'ratna_gembira.png'); } petDisplay.style.transform='rotate(-5deg)'; setTimeout(()=>{ petDisplay.style.transform='rotate(5deg)'; setTimeout(()=>petDisplay.style.transform='rotate(0deg)',100); },100); setLastInteractionNow(); saveState(); updateLastInteractionDisplay(); }
+function sendKiss(){ health = Math.min(100, health + 5); updatePetStatus("Muaahh! 💖"); const sel = localStorage.getItem(SELECTED_SKIN_KEY) || 'default'; if(sel==='default') changeImage('ratna_kiss.png'); else { const e = Object.values(SKIN_MAP).find(s=>s.id===sel); changeImage(e ? `${e.prefix}_kiss.png` : 'ratna_kiss.png'); } petDisplay.style.transform='scale(1.2)'; petDisplay.style.borderColor='#FF0000'; setTimeout(()=>{ petDisplay.style.transform='scale(1)'; petDisplay.style.borderColor='#ff69b4'; },500); setLastInteractionNow(); saveState(); updateLastInteractionDisplay(); }
+
+/* decay */
+setInterval(()=>{ health = Math.max(0, health - 2); if(health===0){ updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀"); changeImage('ratna_normal.png'); } else { updatePetStatus("Nak attention pwiss! 🥺"); const sel = localStorage.getItem(SELECTED_SKIN_KEY) || 'default'; if(sel==='default'){ if(!petDisplay.src.includes('ratna_normal.png') && !petDisplay.src.includes('ratna_makan.png') && !petDisplay.src.includes('ratna_gembira.png') && !petDisplay.src.includes('ratna_kiss.png')) changeImage('ratna_normal.png'); } else { const e = Object.values(SKIN_MAP).find(s=>s.id===sel); if(e){ const normal = `${e.prefix}_normal.png`; if(!petDisplay.src.includes(normal) && !petDisplay.src.includes(`${e.prefix}_makan.png`) && !petDisplay.src.includes(`${e.prefix}_gembira.png`) && !petDisplay.src.includes(`${e.prefix}_kiss.png`)) changeImage(normal); } } } },3000);
+
+/* ---------------- init on load ---------------- */
 loadState();
 if(!localStorage.getItem(STREAK_KEY)) setStreak(0); else setStreak(getStreak());
 updateLastInteractionDisplay();
-updateDailyAvailabilityUI();
+populateSkinSelect();
+updateNextMilestone(getStreak());
+// daily availability UI
+(function updateDailyAvailabilityUI(){
+    const todayStr = (new Date()).toISOString().slice(0,10);
+    const lastClaim = localStorage.getItem(LAST_CLAIM_KEY);
+    if(lastClaim === todayStr){ dailyBtn.disabled = true; dailyBtn.classList.remove('pulse'); startDailyCountdown(); dailyNote.textContent = 'Daily Snack sudah dituntut hari ini.'; } else { dailyBtn.disabled = false; dailyBtn.classList.add('pulse'); dailyNote.textContent = 'Daily Snack tersedia. Tuntut sekali sehari.'; stopDailyCountdown(); }
+})();
 window.addEventListener('beforeunload', ()=> saveState());
+
+/* --------- test & controls ---------- */
+// Force claim increases streak by 1 (for testing) and triggers same UX; use with care
+document.getElementById('forceClaimBtn').addEventListener('click', ()=>{
+    let st = getStreak(); st = st + 1; setStreak(st);
+    health = Math.min(100, health + 20); updatePetStatus('Daily Snack (Test)! +20 🎁');
+    setLastInteractionNow(); saveState(); updateLastInteractionDisplay();
+    showRewardPopup(); burstConfetti(); try{ sfxPop.currentTime=0; sfxPop.play().catch(()=>{}); }catch(e){}
+    // also check milestones on test
+    checkMilestones(st);
+});
+// reset last claim
+document.getElementById('resetLastClaim').addEventListener('click', ()=>{
+    localStorage.removeItem(LAST_CLAIM_KEY);
+    dailyNote.textContent = 'Last claim reset. Daily boleh dituntut sekarang.';
+    if(!dailyBtn.disabled){ dailyBtn.classList.add('pulse'); } updateDailyAvailabilityUI();
+});
+// skin select change
+skinSelect.addEventListener('change', (e)=>{ const id = e.target.value || 'default'; localStorage.setItem(SELECTED_SKIN_KEY, id); applySelectedSkin(id); });
+
+/* apply previously selected skin at load */
+const prevSel = localStorage.getItem(SELECTED_SKIN_KEY) || 'default';
+skinSelect.value = prevSel;
+applySelectedSkin(prevSel);
+
 </script>
 </body>
 </html>
