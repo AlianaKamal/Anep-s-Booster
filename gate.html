@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Private — Mood Booster</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#ffecec;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+    .box{background:#fff;padding:24px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);width:320px;text-align:center}
+    input{width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ddd}
+    button{padding:10px 14px;border-radius:8px;border:none;background:#ff69b4;color:#fff;font-weight:700;cursor:pointer}
+    .hint{font-size:13px;color:#666;margin-top:8px}
+    #err{color:#c0392b;display:none;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="box" role="main" aria-label="Private gate">
+    <h2>Private Access</h2>
+    <p>Masukkan kata laluan untuk akses.</p>
+    <input id="pw" type="password" placeholder="Kata laluan" autocomplete="current-password" />
+    <button id="go">Buka</button>
+    <div id="err">Kata laluan salah.</div>
+    <div class="hint">Jika BF anda tidak boleh masuk beri tahu beliau password.</div>
+  </div>
+
+<script>
+  // ----- CONFIG -----
+  // GANTIKAN nilai di bawah dengan SHA-256 hex output yang awak dapat dari langkah Console
+  const PASSWORD_HASH = "7cc9e11039d0ab0aa84aa9611ed64f624fe4a9cbb3110db6d3b1edd22254db2d";
+  const TOKEN_KEY = 'mood_booster_auth_v1';
+  const TOKEN_VALID_MS = 1000 * 60 * 60 * 24 * 7; // token sah 7 hari (ubah jika perlu)
+
+  async function sha256Hex(str){
+    const enc = new TextEncoder();
+    const data = enc.encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const bytes = new Uint8Array(hash);
+    return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  document.getElementById('go').addEventListener('click', async ()=>{
+    const pw = document.getElementById('pw').value || '';
+    const h = await sha256Hex(pw);
+    if (h === PASSWORD_HASH){
+      // simpan token ringkas: 'ok:timestamp'
+      localStorage.setItem(TOKEN_KEY, 'ok:' + Date.now());
+      // redirect ke laman protected
+      location.href = 'index.html';
+    } else {
+      const e = document.getElementById('err');
+      e.style.display = 'block';
+      e.textContent = 'Kata laluan salah.';
+    }
+  });
+
+  // jika ada token sah terus ke index
+  (async function checkToken(){
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (!t) return;
+    const parts = (t+'').split(':');
+    if (parts[0] === 'ok'){
+      const ts = parseInt(parts[1]) || 0;
+      if ((Date.now() - ts) < TOKEN_VALID_MS){
+        location.replace('index.html');
+      } else {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+    }
+  })();
+</script>
+</body>
+</html>
