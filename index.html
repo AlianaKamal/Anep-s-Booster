@@ -4,86 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mood Booster</title>
+
+    <!-- ===== Gaya Visual Baru (tidak ubah JS asal) ===== -->
     <style>
-        body {
-            background-color: #ffe4e1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
-            text-align: center;
-            overflow: hidden; /* Tambah ini untuk elak scrollbar semasa animasi */
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            max-width: 400px;
-        }
-        #pet-display {
-            width: 150px; /* Saiz gambar */
-            height: 150px;
-            border-radius: 50%; /* Bentuk bulat untuk gambar */
-            object-fit: cover; /* Pastikan gambar muat dalam bulatan */
-            margin-bottom: 10px;
-            border: 4px solid #ff69b4;
-            /* Update transition untuk menampung pelbagai animasi */
-            transition: transform 0.3s ease-out, border-color 0.5s, opacity 0.3s;
-        }
-        #status-message {
-            margin-bottom: 10px;
-            color: #ff69b4;
-            font-weight: bold;
-        }
-        .buttons button {
-            padding: 10px 15px;
-            margin: 5px;
-            font-size: 1em;
-            cursor: pointer;
-            background-color: #ff69b4;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        .meter {
-            width: 100%;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .progress {
-            width: 50%; /* Lebar awal */
-            height: 20px;
-            background-color: #ff1493; /* Warna merah jambu terang */
-            border-radius: 5px;
-            transition: width 0.5s ease-in-out;
-            text-align: center;
-            line-height: 20px;
-            color: white;
-        }
+      :root{
+        --pink:#ff69b4;
+        --hotpink:#ff1493;
+        --bg:#ffe4e1;
+        --card-bg:#ffffff;
+        --muted:#f0f0f0;
+      }
+      html,body{height:100%}
+      body {
+          background-color: var(--bg);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          margin: 0;
+          font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+          text-align: center;
+          overflow: auto;
+      }
+
+      /* Card */
+      .container {
+          background-color: var(--card-bg);
+          padding: 28px 32px;
+          border-radius: 18px;
+          box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+          width: 720px;
+          max-width: calc(100% - 40px);
+          display: flex;
+          gap: 28px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: nowrap;
+      }
+
+      /* Left column: avatar + progress + buttons (centered column) */
+      .left-col {
+          width: 420px;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:14px;
+      }
+      h1{font-size:1.6rem;margin:0 0 4px;font-weight:700;color:#111}
+      .avatar-wrap{
+          width:170px;height:170px;border-radius:50%;
+          padding:6px;border:6px solid var(--pink);
+          display:flex;align-items:center;justify-content:center;
+          background:linear-gradient(180deg, #fff, #fff);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      }
+
+      /* Keep original pet-display styles but adapt to new layout */
+      #pet-display {
+          width:150px;
+          height:150px;
+          border-radius:50%;
+          object-fit:cover;
+          transition: transform .25s, border-color .25s, opacity .3s;
+      }
+
+      /* progress */
+      .meter{ width:100%; background:var(--muted); border-radius:12px; padding:4px; box-sizing:border-box; }
+      .progress{
+          height:26px; width: 50%; /* JS will update */
+          background:linear-gradient(90deg,var(--hotpink),var(--pink)); border-radius:10px;
+          display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;
+          transition: width 0.45s ease-in-out; font-size:0.92rem;
+      }
+      #status-message{ color:var(--pink); font-weight:600; margin-top:6px; min-height:1.2em; }
+
+      /* main buttons row */
+      .buttons{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+      .buttons button{
+          padding:10px 16px; border-radius:10px; border:none; background:var(--pink); color:#fff;
+          font-weight:600; cursor:pointer; box-shadow: 0 6px 12px rgba(255,105,180,0.12);
+      }
+      .action-big { width:160px; }
+
+      /* right-col: extras */
+      .right-col{
+          width:250px; display:flex; flex-direction:column; gap:10px; align-items:center;
+      }
+      #extrasBar {
+          display:flex; flex-direction:column; gap:10px; align-items:center;
+      }
+      #extrasBar .row { display:flex; gap:8px; align-items:center; }
+      #extrasBar button{
+          padding:8px 12px; border-radius:10px; border:none; background:#ff9ccf; color:#111; cursor:pointer;
+          font-weight:600;
+      }
+      #soundToggle { background:#28a745; color:white; box-shadow: 0 4px 10px rgba(40,167,69,0.12); }
+      #dailyBtn { background:#ff8fa6; color:#111; }
+      #snapshotBtn { background:#f4a6d3; }
+      #levelBadge { font-weight:700; padding:6px 10px; border-radius:999px; background:#ffd6e8; color:#b10b5a; display:inline-block; }
+
+      /* Debug box (Test Sounds) */
+      #sound-debug { position:fixed; right:12px; bottom:12px; background:#fff; padding:10px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:99999; width:260px; font-size:13px;}
+      #sound-debug button { padding:6px 8px; margin-right:6px; border-radius:8px; border:none; cursor:pointer; background:#ff69b4; color:white; }
+      #soundLog{ max-height:120px; overflow:auto; text-align:left; margin-top:8px; color:#333 }
+
+      /* reward visuals */
+      .reward-item {
+        position:absolute; pointer-events:none; width:64px; height:64px; transform:translate(-50%,-50%) scale(0.1);
+        transition: transform 450ms cubic-bezier(.2,.9,.2,1), opacity 350ms;
+        opacity:0; z-index:9998;
+        filter: drop-shadow(0 6px 12px rgba(0,0,0,0.18));
+      }
+
+      @media (max-width:780px){
+          .container{ flex-direction:column; width:94%; padding:20px; gap:16px;}
+          .left-col{ width:100%}
+          .right-col{ width:100%; flex-direction:row; justify-content:center; gap:12px;}
+      }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Hi B (B for Brader)</h1>
-        <!-- Gantikan 'my_image.png' dengan pautan gambar anda -->
+
+  <!-- ===== Struktur Kad Baru (mengekalkan ID asal) ===== -->
+  <div class="container">
+    <div class="left-col">
+      <h1>Hi B (B for Brader)</h1>
+
+      <div class="avatar-wrap" aria-hidden="true">
+        <!-- ID pet-display dikekalkan supaya skrip asal berfungsi tanpa ubah -->
         <img id="pet-display" src="ratna_normal.png" alt="Gambar Pet Maya">
-        
-        <div class="meter">
-            <div id="health-bar" class="progress">Kesihatan</div>
-        </div>
-        
-        <div id="status-message">Hai Anep!</div>
-        <div class="buttons">
-            <button onclick="feedPet()">Beri Makan 🍔</button>
-            <button onclick="petPet()">Pujuk 🤗</button>
-            <button onclick="sendKiss()">Send Kiss 😘</button>
-        </div>
+      </div>
+
+      <div class="meter" aria-hidden="true" style="width:100%;">
+        <!-- ID health-bar dikekalkan -->
+        <div id="health-bar" class="progress">Kesihatan</div>
+      </div>
+
+      <div id="status-message">Hai Anep!</div>
+
+      <div class="buttons" role="group" aria-label="Kawalan pet">
+        <!-- onclick masih menunjuk fungsi asal anda -->
+        <button onclick="feedPet()">Beri Makan 🍔</button>
+        <button onclick="petPet()">Pujuk 🤗</button>
+        <button onclick="sendKiss()" class="action-big">Send Kiss 😘</button>
+      </div>
     </div>
 
+    <div class="right-col">
+      <div id="extrasBar">
+        <div class="row">
+          <button id="dailyBtn" title="Claim daily snack">Daily Snack</button>
+          <button id="soundToggle" title="Toggle sound">🔊 On</button>
+        </div>
+        <div class="row">
+          <button id="snapshotBtn" title="Download snapshot">Snapshot</button>
+          <div id="levelBadge">Lvl 1</div>
+        </div>
+        <div style="font-size:12px;color:#b23e72;">Tip: tekan butang untuk beri perhatian</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- confetti canvas (fixed, di atas) -->
+  <canvas id="confettiCanvas" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;"></canvas>
+
+  <!-- ===== Skrip Asal (TIDAK DIUBAH) ===== -->
 <script>
     const petDisplay = document.getElementById('pet-display');
     const statusMessage = document.getElementById('status-message');
@@ -177,33 +262,9 @@
 
 </script>
 
-    <!-- START: Integration block (paste AFTER your original <script> block) -->
-<style>
-  /* tambahan gaya kecil untuk reward item dan extras bar */
-  #extrasBar { margin-top: 10px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-  #extrasBar button { padding:8px 10px; border-radius:8px; border:none; background:#ff69b4; color:white; cursor:pointer; }
-  #confettiCanvas { position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:9999; }
-  .reward-item {
-    position:absolute; pointer-events:none; width:64px; height:64px; transform:translate(-50%,-50%) scale(0.1);
-    transition: transform 450ms cubic-bezier(.2,.9,.2,1), opacity 350ms;
-    opacity:0; z-index:9998;
-    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.18));
-  }
-  #levelBadge { font-weight:700; padding:6px 10px; border-radius:999px; background:#ffd6e8; color:#b10b5a; display:inline-block; }
-</style>
-
-<div id="extrasBar" aria-hidden="false" style="margin-top:12px;">
-  <button id="dailyBtn" title="Claim daily snack">Daily Snack</button>
-  <button id="soundToggle" title="Toggle sound">🔊 On</button>
-  <button id="snapshotBtn" title="Download snapshot">Snapshot</button>
-  <div id="levelBadge">Lvl 1</div>
-</div>
-
-<canvas id="confettiCanvas"></canvas>
-<!-- tempat untuk imej reward (akan dicipta dinamik) -->
-
-<script>
-/* Integration layer — paste selepas skrip asal. Tidak ubah kod asal. */
+  <!-- ===== Integration Block (ADDED) — localStorage, confetti, audio, daily, combo/XP, snapshot ===== -->
+  <script>
+/* Integration layer — paste after original script. Does not change original functions' internals. */
 if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function') {
 
   const STORAGE_KEY = 'petState_v2';
@@ -216,13 +277,13 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   };
   if (typeof window.health === 'number') state.health = window.health;
 
-  // UI refs
+  // UI refs (these IDs exist in the HTML above)
   const dailyBtn = document.getElementById('dailyBtn');
   const soundToggle = document.getElementById('soundToggle');
   const levelBadge = document.getElementById('levelBadge');
   const snapshotBtn = document.getElementById('snapshotBtn');
 
-  // recommended reward items (images optional - you can add local images or use emoji)
+  // reward items (emoji by default)
   const REWARDS = [
     { id:'candy', name:'Candy', health: 12, xp: 12, icon: '🍬' },
     { id:'toy', name:'Toy', health: 20, xp: 18, icon: '🧸' },
@@ -246,19 +307,18 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
     }
   })();
 
-  // audio setup (place sfx files in sfx/ or edit path to hosted URL)
-// AUDIO SETUP — USING YOUR EXISTING FILE NAMES
-// (No need rename your files)
-const sFeed = new Audio('sfxeat.mp3.wav');   // SOUND: feed/makan
-const sPet  = new Audio('sfxpurr.mp3.wav');  // SOUND: pet / bunyi comel
-const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
+  // AUDIO SETUP — USING YOUR EXISTING FILE NAMES
+  // If your files are in a folder, change the paths accordingly.
+  const sFeed = new Audio('sfxeat.mp3.wav');   // SOUND: feed/makan
+  const sPet  = new Audio('sfxpurr.mp3.wav');  // SOUND: pet / bunyi comel (human-like)
+  const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
 
-[sFeed, sPet, sKiss].forEach(a => {
-    a.preload = 'auto';
-    a.volume = 0.9;
-});
+  [sFeed, sPet, sKiss].forEach(a => {
+      a.preload = 'auto';
+      a.volume = 0.9;
+  });
 
-  function playSound(audio) { if (state.mute) return; audio.play().catch(()=>{}); }
+  function playSound(audio) { if (state.mute) return; audio.currentTime = 0; audio.play().catch(()=>{}); }
   function refreshSoundToggleUI(){ soundToggle.textContent = state.mute ? '🔇 Off' : '🔊 On'; soundToggle.style.background = state.mute ? '#999' : '#28a745'; }
   refreshSoundToggleUI();
   soundToggle.addEventListener('click', ()=>{ state.mute = !state.mute; localStorage.setItem('pet_mute', state.mute ? '1' : '0'); refreshSoundToggleUI(); });
@@ -325,9 +385,8 @@ const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
     }, 2500);
   }
 
-  // create floating reward visual (uses emoji by default, you can set imgUrl to show image)
+  // reward visual
   function showRewardVisual(reward){
-    // create element
     const container = document.createElement('div');
     container.className = 'reward-item';
     container.style.left = (window.innerWidth/2 + 40) + 'px';
@@ -349,7 +408,7 @@ const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
     }, 900);
   }
 
-  // original functions preserved & wrapped (no edit original)
+  // preserve originals and wrap (no edits inside original functions)
   const origFeed = window.feedPet.bind(window);
   const origPet  = window.petPet.bind(window);
   const origKiss = window.sendKiss.bind(window);
@@ -381,7 +440,7 @@ const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
     saveState();
   };
 
-  // Daily button gives one of the 3 rewards (random) with visual
+  // Daily claim
   dailyBtn.addEventListener('click', ()=>{
     const today = new Date().toISOString().slice(0,10);
     if (state.lastClaim === today){
@@ -399,7 +458,7 @@ const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
     saveState();
   });
 
-  // snapshot (same as before)
+  // Snapshot
   snapshotBtn.addEventListener('click', async ()=>{
     try {
       const petImg = document.getElementById('pet-display');
@@ -430,10 +489,64 @@ const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
 } else {
   console.warn('Integration failed: original functions not found. Pastikan skrip asal dimuatkan dahulu.');
 }
-</script>
-<!-- END: Integration block -->
+  </script>
+
+  <!-- ===== Sound Debug Widget (helps test if audio loads) ===== -->
+  <div id="sound-debug" aria-hidden="false">
+    <div style="font-weight:700;margin-bottom:6px">Sound debug</div>
+    <div>
+      <button id="testSoundsBtn">Test Sounds</button>
+      <button id="useHosted">Use Hosted</button>
+    </div>
+    <div id="soundLog"></div>
+  </div>
+
+  <script>
+  // Quick sound debug (uses the audio objects if available)
+  (function(){
+    const logEl = document.getElementById('soundLog');
+    function log(msg){ logEl.innerHTML = (new Date().toLocaleTimeString()) + ' — ' + msg + '<br/>' + logEl.innerHTML; console.log(msg); }
+
+    // Grab audio objects if created by integration
+    const sFeed = window.sFeed || new Audio('sfxeat.mp3.wav');
+    const sPet  = window.sPet  || new Audio('sfxpurr.mp3.wav');
+    const sKiss = window.sKiss || new Audio('sfxkiss.mp3.wav');
+
+    [['feed', sFeed], ['pet', sPet], ['kiss', sKiss]].forEach(([name,a])=>{
+      a.addEventListener('canplaythrough', ()=> log(name + ' loaded ok (canplaythrough)'));
+      a.addEventListener('loadeddata', ()=> log(name + ' loadeddata'));
+      a.addEventListener('error', (ev)=> log(name + ' ERROR loading. Check path or console network tab.'));
+      a.addEventListener('play', ()=> log(name + ' play started'));
+      a.addEventListener('ended', ()=> log(name + ' ended'));
+      a.preload = 'auto';
+    });
+
+    document.getElementById('testSoundsBtn').addEventListener('click', async ()=>{
+      log('Testing local files...');
+      try { await tryPlay(sFeed); await delay(600); await tryPlay(sPet); await delay(600); await tryPlay(sKiss); log('Local test finished'); }
+      catch(e){ log('Local test error: ' + e); }
+    });
+
+    document.getElementById('useHosted').addEventListener('click', async ()=>{
+      log('Testing with hosted test sound...');
+      const hosted = 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3';
+      try { const ta = new Audio(hosted); ta.preload='auto'; await tryPlay(ta); log('Hosted test played OK'); } catch(e){ log('Hosted test failed: ' + e); }
+    });
+
+    function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    function tryPlay(audioEl){ return new Promise((resolve,reject)=> {
+      let done=false;
+      const onPlay = ()=>{ done=true; cleanup(); resolve(); };
+      const onErr = ()=>{ cleanup(); reject('play error'); };
+      function cleanup(){ audioEl.removeEventListener('play',onPlay); audioEl.removeEventListener('error', onErr); }
+      audioEl.play().then(()=>{}).catch(()=>{});
+      audioEl.addEventListener('play', onPlay);
+      audioEl.addEventListener('error', onErr);
+      setTimeout(()=>{ if(!done){ cleanup(); reject('no-play-timeout'); } }, 2500);
+    }); }
+    window._sound_debug = { sFeed, sPet, sKiss, log };
+  })();
+  </script>
 
 </body>
 </html>
-
-
