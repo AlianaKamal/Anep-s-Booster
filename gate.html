@@ -7,19 +7,23 @@
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#ffecec;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
     .box{background:#fff;padding:24px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);width:360px;text-align:center}
-    input{width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ddd}
+    input{width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
     button{padding:10px 14px;border-radius:8px;border:none;background:#ff69b4;color:#fff;font-weight:700;cursor:pointer}
     .hint{font-size:13px;color:#666;margin-top:8px}
     #err{color:#c0392b;display:none;margin-top:8px}
     .row { display:flex; align-items:center; gap:8px; justify-content:flex-start; margin-top:6px; }
+    label.small{font-size:14px;color:#444}
   </style>
 </head>
 <body>
   <div class="box" role="main" aria-label="Private gate">
     <h2>VIP Access: Boyfriend Edition</h2>
     <p>Masukkan kata kunci, macam awak kunci hati saya.</p>
-    <input id="pw" type="password" placeholder="Birthday Cinta Hati (Awal No IC)" autocomplete="current-password" />
+    <input id="pw" type="password" placeholder="Birthday Cinta Hati (Awal No IC)" autocomplete="current-password" autofocus />
     <div class="row">
+      <!-- Tambah checkbox "Ingat saya" supaya kod tidak error -->
+      <input id="remember" type="checkbox" />
+      <label for="remember" class="small">Ingat saya di komputer ini</label>
     </div>
     <button id="go">Buka</button>
     <div id="err">Dah Tak Ingat Birthday Saya Ke!</div>
@@ -64,18 +68,40 @@
     return (Date.now() - ts) < DEFAULT_EXPIRY_MS;
   }
 
+  // helper to show error
+  function showError(msg){
+    const e = document.getElementById('err');
+    e.textContent = msg;
+    e.style.display = 'block';
+  }
+  function hideError(){ document.getElementById('err').style.display = 'none'; }
+
+  // on click
   document.getElementById('go').addEventListener('click', async ()=>{
-    const pw = document.getElementById('pw').value || '';
-    const remember = document.getElementById('remember').checked;
-    const h = await sha256Hex(pw);
-    if (h === PASSWORD_HASH){
-      saveToken(remember);
-      location.href = 'index.html';
-    } else {
-      const e = document.getElementById('err');
-      e.style.display = 'block';
-      e.textContent = 'Dah Tak Ingat Birthday Saya Ke!';
+    hideError();
+    try {
+      const pw = (document.getElementById('pw').value || '').trim();
+      // handle missing remember safely
+      const rememberEl = document.getElementById('remember');
+      const remember = rememberEl ? !!rememberEl.checked : false;
+      if (!pw) { showError('Sila masukkan kata kunci.'); return; }
+      const h = await sha256Hex(pw);
+      if (h === PASSWORD_HASH){
+        saveToken(remember);
+        // small delay to ensure localStorage write
+        setTimeout(()=> location.href = 'index.html', 80);
+      } else {
+        showError('Dah Tak Ingat Birthday Saya Ke!');
+      }
+    } catch (err) {
+      console.error('Gate error', err);
+      showError('Ralat. Buka Console untuk diagnosis.');
     }
+  });
+
+  // support pressing Enter on password field
+  document.getElementById('pw').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') document.getElementById('go').click();
   });
 
   // auto-redirect if already have valid token
@@ -85,13 +111,10 @@
       if (isTokenValid(raw)) {
         location.replace('index.html');
       }
-    } catch(e){}
+    } catch(e){
+      console.warn('checkToken failed', e);
+    }
   })();
 </script>
 </body>
 </html>
-
-
-
-
-
