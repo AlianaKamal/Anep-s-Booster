@@ -176,6 +176,289 @@
     changeImage('ratna_normal.png');
 
 </script>
+
+    <!-- TAMBAHAN: paste selepas skrip JS asal anda (tidak ubah kod asal) -->
+<style>
+  /* sedikit gaya untuk butang baru dan canvas konfeti */
+  #extrasBar { margin-top: 10px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  #extrasBar button { padding:8px 10px; border-radius:8px; border:none; background:#ff69b4; color:white; cursor:pointer; }
+  #confettiCanvas { position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:9999; }
+  #soundToggle{ background: #777; }
+  #dailyBtn{ background: #ffb347; color: #111; }
+  #levelBadge { font-weight:700; padding:6px 10px; border-radius:999px; background:#ffd6e8; color:#b10b5a;}
+</style>
+
+<!-- Elemen UI tambahan (letakkan di dalam .container anda jika mahu) -->
+<div id="extrasBar" aria-hidden="false" style="margin-top:12px;">
+  <button id="dailyBtn" title="Claim daily snack">Daily Snack</button>
+  <button id="soundToggle" title="Toggle sound">🔊 On</button>
+  <button id="snapshotBtn" title="Download snapshot">Snapshot</button>
+  <div id="levelBadge">Lvl 1</div>
+</div>
+
+<canvas id="confettiCanvas"></canvas>
+
+<script>
+/* === INTEGRATION LAYER (paste after original script) ===
+   Works by wrapping original functions (no direct edit to original).
+*/
+
+/* safety: hanya jalankan jika fungsi asal wujud */
+if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function') {
+
+  /* ---------- persistent state ---------- */
+  const STORAGE_KEY = 'petState_v1';
+  const state = {
+    health: (typeof health === 'number') ? health : 100,
+    xp: Number(localStorage.getItem('pet_xp') || 0),
+    level: Number(localStorage.getItem('pet_level') || 1),
+    lastClaim: localStorage.getItem('pet_lastClaim') || null,
+    mute: (localStorage.getItem('pet_mute') === '1'),
+  };
+
+  // sync initial health into global if exists
+  if (typeof window.health === 'number') state.health = window.health;
+
+  // UI refs
+  const dailyBtn = document.getElementById('dailyBtn');
+  const soundToggle = document.getElementById('soundToggle');
+  const levelBadge = document.getElementById('levelBadge');
+  const snapshotBtn = document.getElementById('snapshotBtn');
+
+  // update level badge UI
+  function updateLevelUI(){
+    levelBadge.textContent = `Lvl ${state.level}`;
+  }
+  updateLevelUI();
+
+  // save helper
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ health: state.health, xp: state.xp, level: state.level, lastClaim: state.lastClaim }));
+    localStorage.setItem('pet_xp', String(state.xp));
+    localStorage.setItem('pet_level', String(state.level));
+    localStorage.setItem('pet_mute', state.mute ? '1' : '0');
+  }
+
+  // load stored health if ada
+  (function loadStored(){
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (typeof saved.health === 'number') {
+      state.health = saved.health;
+      // update global health & UI using existing function
+      if (typeof window.health !== 'undefined') window.health = state.health;
+      if (typeof window.updatePetStatus === 'function') window.updatePetStatus("Welcome back! 😊");
+      // also update health bar width if present
+      const hb = document.getElementById('health-bar');
+      if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
+    }
+  })();
+
+  /* ---------- Audio setup ---------- */
+  const sFeed = new Audio('sfx/eat.mp3');
+  const sPet  = new Audio('sfx/purr.mp3');
+  const sKiss = new Audio('sfx/kiss.mp3');
+  [sFeed,sPet,sKiss].forEach(a => { a.preload = 'auto'; a.volume = 0.9; });
+
+  function playSound(audio) {
+    if (state.mute) return;
+    audio.play().catch(()=>{ /* ignore autoplay block */ });
+  }
+
+  // toggle UI
+  function refreshSoundToggleUI(){
+    soundToggle.textContent = state.mute ? '🔇 Off' : '🔊 On';
+    soundToggle.style.background = state.mute ? '#999' : '#28a745';
+  }
+  refreshSoundToggleUI();
+
+  soundToggle.addEventListener('click', ()=>{
+    state.mute = !state.mute;
+    localStorage.setItem('pet_mute', state.mute ? '1' : '0');
+    refreshSoundToggleUI();
+  });
+
+  /* ---------- Confetti (simple canvas burst) ---------- */
+  const confCanvas = document.getElementById('confettiCanvas');
+  const cctx = confCanvas.getContext ? confCanvas.getContext('2d') : null;
+  function resizeCanvas(){
+    if(!cctx) return;
+    confCanvas.width = window.innerWidth;
+    confCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function burstConfetti(x = window.innerWidth/2, y = window.innerHeight/3){
+    if (!cctx) return;
+    const parts = [];
+    const colors = ['#ff69b4','#ff1493','#ffd700','#f06292'];
+    for (let i=0;i<50;i++){
+      parts.push({
+        x, y,
+        vx: (Math.random()-0.5)*8,
+        vy: -Math.random()*8 - 2,
+        r: 3 + Math.random()*6,
+        c: colors[Math.floor(Math.random()*colors.length)],
+        life: 70 + Math.floor(Math.random()*30)
+      });
+    }
+    let t = 0;
+    const anim = setInterval(()=>{
+      cctx.clearRect(0,0,confCanvas.width, confCanvas.height);
+      parts.forEach(p=>{
+        p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life--;
+        cctx.fillStyle = p.c;
+        cctx.beginPath();
+        cctx.ellipse(p.x, p.y, p.r, p.r*0.8, 0, 0, Math.PI*2);
+        cctx.fill();
+      });
+      t++;
+      if (t > 90) { clearInterval(anim); cctx.clearRect(0,0,confCanvas.width, confCanvas.height); }
+    }, 16);
+  }
+
+  /* ---------- Level / XP system ---------- */
+  function xpNeededFor(level){ return level * 50; }
+  function addXP(amount){
+    state.xp += amount;
+    while (state.xp >= xpNeededFor(state.level)){
+      state.xp -= xpNeededFor(state.level);
+      state.level++;
+      // unlock celebration
+      burstConfetti();
+      if (typeof window.updatePetStatus === 'function') window.updatePetStatus(`Level up! Now level ${state.level} 🎉`);
+    }
+    saveState();
+    updateLevelUI();
+  }
+
+  /* ---------- Combo tap mini-game (feed) ---------- */
+  let comboTaps = 0, comboTimer = null;
+  function registerComboTap(){
+    comboTaps++;
+    if (comboTimer) clearTimeout(comboTimer);
+    comboTimer = setTimeout(()=>{
+      // evaluate combo
+      if (comboTaps >= 5){
+        // big reward
+        state.health = Math.min(100, state.health + 40);
+        if (typeof window.health !== 'undefined') window.health = state.health;
+        if (typeof window.updatePetStatus === 'function') window.updatePetStatus('Combo! +40 🎯');
+        burstConfetti();
+        addXP(30);
+      } else if (comboTaps >= 3){
+        state.health = Math.min(100, state.health + 20);
+        if (typeof window.health !== 'undefined') window.health = state.health;
+        if (typeof window.updatePetStatus === 'function') window.updatePetStatus('Nice combo! +20');
+        addXP(15);
+      } else {
+        addXP(5);
+      }
+      // sync health UI
+      const hb = document.getElementById('health-bar');
+      if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
+      saveState();
+      comboTaps = 0;
+      comboTimer = null;
+    }, 2500); // 2.5s window
+  }
+
+  /* ---------- Wrapping original functions (no edit original) ---------- */
+  // preserve originals
+  const origFeed = window.feedPet.bind(window);
+  const origPet  = window.petPet.bind(window);
+  const origKiss = window.sendKiss.bind(window);
+
+  // redefine wrappers
+  window.feedPet = function(...args){
+    origFeed(...args);               // run original
+    // sync state
+    if (typeof window.health === 'number') state.health = window.health;
+    // play sound
+    playSound(sFeed);
+    // small confetti & XP and save
+    burstConfetti();
+    addXP(10);
+    saveState();
+    // register combo tap
+    registerComboTap();
+  };
+
+  window.petPet = function(...args){
+    origPet(...args);
+    if (typeof window.health === 'number') state.health = window.health;
+    playSound(sPet);
+    addXP(7);
+    saveState();
+  };
+
+  window.sendKiss = function(...args){
+    origKiss(...args);
+    if (typeof window.health === 'number') state.health = window.health;
+    playSound(sKiss);
+    burstConfetti();
+    addXP(4);
+    saveState();
+  };
+
+  /* ---------- Daily reward button ---------- */
+  dailyBtn.addEventListener('click', ()=>{
+    const today = new Date().toISOString().slice(0,10);
+    if (state.lastClaim === today){
+      alert('Anda sudah tuntut Daily Snack hari ini!');
+      return;
+    }
+    state.lastClaim = today;
+    state.health = Math.min(100, state.health + 20);
+    if (typeof window.health !== 'undefined') window.health = state.health;
+    if (typeof window.updatePetStatus === 'function') window.updatePetStatus('Daily Snack! +20 🎁');
+    burstConfetti();
+    addXP(20);
+    saveState();
+  });
+
+  /* ---------- Snapshot (download pet img + status) ---------- */
+  snapshotBtn.addEventListener('click', async ()=>{
+    // simple: capture pet image element as dataURL and trigger download
+    try {
+      const petImg = document.getElementById('pet-display');
+      if (!petImg) throw 'No pet image';
+      // draw the image into a temporary canvas
+      const c = document.createElement('canvas');
+      c.width = petImg.naturalWidth || 300;
+      c.height = petImg.naturalHeight || 300;
+      const ctx = c.getContext('2d');
+      // white bg
+      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+      // draw avatar centered
+      ctx.drawImage(petImg, 0, 0, c.width, c.height);
+      // add text
+      ctx.fillStyle = '#000'; ctx.font = '18px sans-serif';
+      ctx.fillText(`Health: ${state.health}%`, 10, c.height - 30);
+      ctx.fillText(`Level: ${state.level}`, 10, c.height - 10);
+      const url = c.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url; a.download = `pet_snapshot_${new Date().toISOString().slice(0,10)}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e){
+      alert('Snapshot failed: ' + e);
+    }
+  });
+
+  /* ---------- Save periodically and on exit ---------- */
+  setInterval(saveState, 5000);
+  window.addEventListener('beforeunload', saveState);
+
+  // initial UI sync
+  updateLevelUI();
+  refreshSoundToggleUI();
+
+} else {
+  console.warn('Pet integration layer: original functions (feedPet/petPet/sendKiss) tidak ditemui. Pastikan kod asal dimuatkan dahulu.');
+}
+</script>
+
 </body>
 </html>
+
 
