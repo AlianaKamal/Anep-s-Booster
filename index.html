@@ -14,7 +14,7 @@
             margin: 0;
             font-family: sans-serif;
             text-align: center;
-            overflow: hidden; /* Tambah ini untuk elak scrollbar semasa animasi */
+            overflow: hidden; /* elak scrollbar semasa animasi */
         }
         .container {
             background-color: white;
@@ -30,16 +30,20 @@
             object-fit: cover; /* Pastikan gambar muat dalam bulatan */
             margin-bottom: 10px;
             border: 4px solid #ff69b4;
-            /* Update transition untuk menampung pelbagai animasi */
             transition: transform 0.3s ease-out, border-color 0.5s, opacity 0.3s;
         }
         #status-message {
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             color: #ff69b4;
             font-weight: bold;
         }
+        #last-interaction {
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 0.9rem;
+        }
         .buttons button {
-            padding: 10px 15px;
+            padding: 10px 12px;
             margin: 5px;
             font-size: 1em;
             cursor: pointer;
@@ -64,12 +68,19 @@
             line-height: 20px;
             color: white;
         }
+        /* Butang daily berbeza sedikit */
+        .daily-btn {
+            background: linear-gradient(90deg,#ff69b4,#ff1493);
+            box-shadow: 0 3px 8px rgba(255,20,147,0.12);
+            padding:8px 10px;
+            font-size:0.95rem;
+        }
+        .small-note { font-size:0.85rem; color:#777; margin-top:6px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Hi B (B for Brader)</h1>
-        <!-- Gantikan 'my_image.png' dengan pautan gambar anda -->
         <img id="pet-display" src="ratna_normal.png" alt="Gambar Pet Maya">
         
         <div class="meter">
@@ -77,30 +88,38 @@
         </div>
         
         <div id="status-message">Hai Anep!</div>
+        <!-- Paparan last interaction -->
+        <div id="last-interaction">Last interaction: —</div>
+
         <div class="buttons">
             <button onclick="feedPet()">Beri Makan 🍔</button>
             <button onclick="petPet()">Pujuk 🤗</button>
             <button onclick="sendKiss()">Send Kiss 😘</button>
+            <!-- Daily reward button -->
+            <button class="daily-btn" onclick="claimDaily()">Daily Snack 🎁</button>
         </div>
+
+        <div class="small-note" id="daily-note"></div>
     </div>
 
 <script>
     const petDisplay = document.getElementById('pet-display');
     const statusMessage = document.getElementById('status-message');
     const healthBar = document.getElementById('health-bar');
+    const lastInteractionEl = document.getElementById('last-interaction');
+    const dailyNote = document.getElementById('daily-note');
 
     // Status awal (skala 0 hingga 100)
     let health = 100;
-    // Last interaction timestamp (ISO string) - akan disimpan ke localStorage
-    let lastInteraction = null;
+    let lastInteraction = null; // ISO timestamp, disimpan dalam localStorage
+    // key untuk last claim daily (simpan tarikh YYYY-MM-DD)
+    const LAST_CLAIM_KEY = 'pet_lastClaimDate';
 
-    // Fungsi utiliti untuk tukar gambar
     function changeImage(imageSrc) {
         petDisplay.src = imageSrc;
     }
 
-    // --- START localStorage additions ---
-    // helper: dapatkan nama fail dari src (selamat jika src penuh URL)
+    // util: dapatkan nama fail dari src
     function getFileNameFromSrc(src) {
         try {
             const parts = src.split('/');
@@ -110,104 +129,132 @@
         }
     }
 
-    // Save state to localStorage (masukkan lastInteraction)
+    // Save state ke localStorage (masukkan lastInteraction)
     function saveState() {
         try {
             const state = {
                 health: health,
                 lastImage: getFileNameFromSrc(petDisplay.src || 'ratna_normal.png'),
                 status: statusMessage.textContent || '',
-                lastInteraction: lastInteraction // ISO timestamp or null
+                lastInteraction: lastInteraction || null
             };
             localStorage.setItem('petState', JSON.stringify(state));
         } catch (e) {
-            // ignore quota or other errors quietly
             console.warn('saveState error', e);
         }
     }
 
-    // Load state from localStorage (if ada)
+    // Load state dari localStorage
     (function loadState() {
         try {
             const raw = localStorage.getItem('petState');
-            if (!raw) return;
+            if (!raw) {
+                updateLastInteractionDisplay();
+                return;
+            }
             const saved = JSON.parse(raw);
             if (saved && typeof saved === 'object') {
                 if (typeof saved.health === 'number') health = Math.max(0, Math.min(100, saved.health));
-                if (saved.lastImage) {
-                    // gunakan nama fail sahaja; kalau anda simpan path penuh, ini masih berfungsi
-                    changeImage(saved.lastImage);
-                }
+                if (saved.lastImage) changeImage(saved.lastImage);
                 if (saved.status) statusMessage.textContent = saved.status;
                 if (saved.lastInteraction) lastInteraction = saved.lastInteraction;
             }
         } catch (e) {
             console.warn('loadState error', e);
         }
+        updateLastInteractionDisplay();
     })();
 
-    // Update lastInteraction helper
+    // set lastInteraction to now (ISO)
     function setLastInteractionNow() {
         lastInteraction = new Date().toISOString();
     }
 
-    // Save before unload (browser/tab close)
-    window.addEventListener('beforeunload', () => {
-        saveState();
-    });
-    // --- END localStorage additions ---
+    // paparkan lastInteraction dalam format lebih mesra
+    function updateLastInteractionDisplay() {
+        if (!lastInteraction) {
+            lastInteractionEl.textContent = 'Last interaction: —';
+            return;
+        }
+        try {
+            const d = new Date(lastInteraction);
+            // paparkan sebagai tarikh & masa tempatan (browser)
+            lastInteractionEl.textContent = 'Last interaction: ' + d.toLocaleString();
+        } catch (e) {
+            lastInteractionEl.textContent = 'Last interaction: ' + lastInteraction;
+        }
+    }
 
-    // Fungsi apabila memberi makan
+    // daily reward logic: satu tuntutan setiap hari (berdasarkan tarikh setempat)
+    function claimDaily() {
+        try {
+            const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+            const lastClaim = localStorage.getItem(LAST_CLAIM_KEY); // contoh '2025-12-03'
+            if (lastClaim === today) {
+                dailyNote.textContent = 'Anda sudah tuntut Daily Snack hari ini. Sila cuba esok.';
+                return;
+            }
+            // beri bonus +20 health (boleh ubah)
+            health = Math.min(100, health + 20);
+            updatePetStatus('Daily Snack! +20 🎁');
+            // kemaskini last claim
+            localStorage.setItem(LAST_CLAIM_KEY, today);
+            // rekod interaksi sebagai tuntutan harian juga
+            setLastInteractionNow();
+            saveState();
+            updateLastInteractionDisplay();
+            dailyNote.textContent = 'Berjaya tuntut! Datang lagi esok.';
+        } catch (e) {
+            console.warn('claimDaily error', e);
+            dailyNote.textContent = 'Tidak boleh tuntut sekarang, cuba lagi kemudian.';
+        }
+    }
+
+    // Fungsi interaksi asal, tambah update lastInteraction dan saveState
     function feedPet() {
         health = Math.min(100, health + 15);
         updatePetStatus("Yummy! Masyeh Anep! 😋");
-        changeImage('ratna_makan.png'); // Tukar gambar makan
-        // Animasi melantun kecil
+        changeImage('ratna_makan.png');
         petDisplay.style.transform = 'translateY(-10px)'; 
         setTimeout(() => { petDisplay.style.transform = 'translateY(0px)'; }, 300);
 
-        // simpan state (kemaskini lastInteraction)
         setLastInteractionNow();
         saveState();
+        updateLastInteractionDisplay();
     }
 
-    // Fungsi apabila membelai
     function petPet() {
         health = Math.min(100, health + 10);
         updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
-        changeImage('ratna_gembira.png'); // Tukar gambar gembira
-        // Animasi bergoncang (pusing)
+        changeImage('ratna_gembira.png');
         petDisplay.style.transform = 'rotate(-5deg)'; 
         setTimeout(() => {
             petDisplay.style.transform = 'rotate(5deg)';
             setTimeout(() => { petDisplay.style.transform = 'rotate(0deg)'; }, 100);
         }, 100);
 
-        // simpan state (kemaskini lastInteraction)
         setLastInteractionNow();
         saveState();
+        updateLastInteractionDisplay();
     }
 
-    // Fungsi baharu: Hantar Ciuman
     function sendKiss() {
-        health = Math.min(100, health + 5); // Ciuman pun baik untuk kesihatan!
+        health = Math.min(100, health + 5);
         updatePetStatus("Muaahh! 💖");
-        changeImage('ratna_kiss.png'); // Tukar gambar cium
-        // Animasi skala (zoom in/out)
+        changeImage('ratna_kiss.png');
         petDisplay.style.transform = 'scale(1.2)';
-        petDisplay.style.borderColor = '#FF0000'; // Tukar border kepada merah cinta
+        petDisplay.style.borderColor = '#FF0000';
 
         setTimeout(() => {
             petDisplay.style.transform = 'scale(1)';
-            petDisplay.style.borderColor = '#ff69b4'; // Kembali ke warna asal
+            petDisplay.style.borderColor = '#ff69b4';
         }, 500);
 
-        // simpan state (kemaskini lastInteraction)
         setLastInteractionNow();
         saveState();
+        updateLastInteractionDisplay();
     }
 
-    // Fungsi untuk kemas kini paparan dan mesej
     function updatePetStatus(message) {
         statusMessage.textContent = message;
         healthBar.style.width = `${health}%`;
@@ -219,39 +266,51 @@
             statusMessage.style.color = '#ff69b4';
         }
 
-        // save state also when status updated (covers decay updates)
-        // NOTE: we do not change lastInteraction here so timestamp stays as last user action
+        // save state for decay updates etc (but lastInteraction not changed here)
         saveState();
     } 
 
-    /* FUNGSI animatePet() ASAL DIBUANG KERANA LOGIK BARU SUDAH DILETAKKAN DALAM FUNGSI INTERAKSI */
-
-    // Kesihatan berkurangan secara beransur-ansur dari masa ke masa
+    // decay
     setInterval(() => {
         health = Math.max(0, health - 2);
         
         if (health === 0) {
             updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀");
-            changeImage('ratna_normal.png'); // Kembali ke gambar biasa bila tiada interaksi
+            changeImage('ratna_normal.png');
         } else {
             updatePetStatus("Nak attention pwiss! 🥺"); 
-            // Apabila berkurangan, kita tetapkan semula gambar kepada normal jika ia bukan normal
             if (!petDisplay.src.includes('ratna_normal.png') && 
                 !petDisplay.src.includes('ratna_makan.png') && 
                 !petDisplay.src.includes('ratna_gembira.png') && 
                 !petDisplay.src.includes('ratna_kiss.png')) {
-                    // Hanya tukar jika gambar semasa tiada dalam senarai interaksi aktif
                      changeImage('ratna_normal.png');
             }
         }
 
-    }, 3000); // Setiap 3 saat
+    }, 3000); // setiap 3 saat
 
-    // Muatkan status awal
+    // simpan sebelum tab ditutup
+    window.addEventListener('beforeunload', () => {
+        saveState();
+    });
+
+    // paparan awal
     updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊");
-    // Pastikan imej awal adalah normal
     changeImage('ratna_normal.png');
+    updateLastInteractionDisplay();
 
+    // optional: tampilkan nota sama ada daily sudah dituntut hari ini semasa load
+    (function updateDailyNoteOnLoad(){
+        try {
+            const today = new Date().toISOString().slice(0,10);
+            const lastClaim = localStorage.getItem(LAST_CLAIM_KEY);
+            if (lastClaim === today) {
+                dailyNote.textContent = 'Daily Snack sudah dituntut hari ini.';
+            } else {
+                dailyNote.textContent = 'Daily Snack tersedia. Tuntut sekali sehari.';
+            }
+        } catch(e){}
+    })();
 </script>
 </body>
 </html>
