@@ -247,10 +247,16 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
   })();
 
   // audio setup (place sfx files in sfx/ or edit path to hosted URL)
-  const sFeed = new Audio('sfx/eat.mp3');
-  const sPet  = new Audio('sfx/purr.mp3');
-  const sKiss = new Audio('sfx/kiss.mp3');
-  [sFeed,sPet,sKiss].forEach(a => { a.preload = 'auto'; a.volume = 0.9; });
+// AUDIO SETUP — USING YOUR EXISTING FILE NAMES
+// (No need rename your files)
+const sFeed = new Audio('sfxeat.mp3.wav');   // SOUND: feed/makan
+const sPet  = new Audio('sfxpurr.mp3.wav');  // SOUND: pet / bunyi comel
+const sKiss = new Audio('sfxkiss.mp3.wav');  // SOUND: kiss/cium
+
+[sFeed, sPet, sKiss].forEach(a => {
+    a.preload = 'auto';
+    a.volume = 0.9;
+});
 
   function playSound(audio) { if (state.mute) return; audio.play().catch(()=>{}); }
   function refreshSoundToggleUI(){ soundToggle.textContent = state.mute ? '🔇 Off' : '🔊 On'; soundToggle.style.background = state.mute ? '#999' : '#28a745'; }
@@ -429,4 +435,5 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
 
 </body>
 </html>
+
 
