@@ -130,20 +130,22 @@
 </head>
 <body>
 
-    <!-- START: Client-side gate check - paste at very top of index.html (before other scripts) -->
+<!-- PASTE AT VERY TOP OF index.html -->
 <script>
   (function(){
     try {
       const TOKEN_KEY = 'mood_booster_auth_v1';
-      const t = localStorage.getItem(TOKEN_KEY);
-      if (!t) {
-        location.replace('gate.html');
-        return;
+      const DEFAULT_EXPIRY_MS = 1000*60*60*24*7; // keep in sync with gate
+      function isTokenValid(raw){
+        if(!raw) return false;
+        const parts = raw.split(':');
+        if(parts[0] !== 'ok') return false;
+        if(parts[2] === 'perm') return true; // permanent remember
+        const ts = parseInt(parts[1]) || 0;
+        return (Date.now() - ts) < DEFAULT_EXPIRY_MS;
       }
-      const parts = (t+'').split(':');
-      const ts = parseInt(parts[1]) || 0;
-      // same expiry as gate (7 days) - keep in sync with gate.html if you change it
-      if (!(parts[0] === 'ok' && (Date.now() - ts < 1000*60*60*24*7))) {
+      const t = localStorage.getItem(TOKEN_KEY);
+      if (!isTokenValid(t)){
         localStorage.removeItem(TOKEN_KEY);
         location.replace('gate.html');
       }
@@ -152,7 +154,6 @@
     }
   })();
 </script>
-<!-- END: Client-side gate check -->
 
 
   <!-- small theme toggle -->
@@ -597,4 +598,5 @@
 
 </body>
 </html>
+
 
