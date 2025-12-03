@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mood Booster</title>
+    <title>Mood Booster — Daily Fun</title>
     <style>
         body {
             background-color: #ffe4e1;
@@ -14,7 +14,7 @@
             margin: 0;
             font-family: sans-serif;
             text-align: center;
-            overflow: hidden; /* elak scrollbar semasa animasi */
+            overflow: hidden;
         }
         .container {
             background-color: white;
@@ -24,10 +24,10 @@
             max-width: 400px;
         }
         #pet-display {
-            width: 150px; /* Saiz gambar */
+            width: 150px;
             height: 150px;
-            border-radius: 50%; /* Bentuk bulat untuk gambar */
-            object-fit: cover; /* Pastikan gambar muat dalam bulatan */
+            border-radius: 50%;
+            object-fit: cover;
             margin-bottom: 10px;
             border: 4px solid #ff69b4;
             transition: transform 0.3s ease-out, border-color 0.5s, opacity 0.3s;
@@ -38,13 +38,18 @@
             font-weight: bold;
         }
         #last-interaction {
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             color: #666;
             font-size: 0.9rem;
         }
+        #streak-display {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #333;
+        }
+        .buttons { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
         .buttons button {
             padding: 10px 12px;
-            margin: 5px;
             font-size: 1em;
             cursor: pointer;
             background-color: #ff69b4;
@@ -52,265 +57,406 @@
             border: none;
             border-radius: 5px;
         }
-        .meter {
-            width: 100%;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
+        .meter { width: 100%; background-color: #f0f0f0; border-radius: 5px; margin-bottom: 10px; }
         .progress {
-            width: 50%; /* Lebar awal */
+            width: 50%;
             height: 20px;
-            background-color: #ff1493; /* Warna merah jambu terang */
+            background-color: #ff1493;
             border-radius: 5px;
             transition: width 0.5s ease-in-out;
             text-align: center;
             line-height: 20px;
             color: white;
         }
-        /* Butang daily berbeza sedikit */
-        .daily-btn {
+
+        /* Daily button special */
+        #dailyBtn {
             background: linear-gradient(90deg,#ff69b4,#ff1493);
             box-shadow: 0 3px 8px rgba(255,20,147,0.12);
             padding:8px 10px;
             font-size:0.95rem;
+            position:relative;
+            overflow:visible;
         }
+        /* pulse animation when available */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,20,147,0.25); }
+            70% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(255,20,147,0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,20,147,0); }
+        }
+        .pulse { animation: pulse 1.8s infinite; }
+
+        /* disabled state */
+        #dailyBtn[disabled] { opacity: 0.6; cursor: not-allowed; transform:none; animation:none; }
+
+        /* reward popup */
+        #rewardPopup {
+            position: fixed;
+            left: 50%; top: 25%;
+            transform: translate(-50%, -50%) scale(0.75);
+            background: white;
+            padding: 14px 18px;
+            border-radius: 12px;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.2);
+            display: flex;
+            gap:10px;
+            align-items:center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.35s cubic-bezier(.2,.9,.2,1), opacity 0.25s ease;
+        }
+        #rewardPopup.show { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+        #rewardPopup .big { font-size: 1.4rem; font-weight: 700; color:#ff1493; }
+
+        /* confetti canvas full-screen overlay (pointer-events none so clicks pass) */
+        #confettiCanvas {
+            position: fixed;
+            left:0; top:0; width:100%; height:100%;
+            pointer-events: none;
+            z-index:1500;
+        }
+
+        /* small note */
         .small-note { font-size:0.85rem; color:#777; margin-top:6px; }
+
+        /* sound toggle */
+        #soundToggle { position:absolute; right:12px; top:10px; background:transparent; color:#777; border:none; cursor:pointer; font-size:0.9rem; }
     </style>
 </head>
 <body>
     <div class="container">
+        <button id="soundToggle" title="Toggle sound">🔊</button>
         <h1>Hi B (B for Brader)</h1>
         <img id="pet-display" src="ratna_normal.png" alt="Gambar Pet Maya">
-        
+
         <div class="meter">
             <div id="health-bar" class="progress">Kesihatan</div>
         </div>
-        
+
         <div id="status-message">Hai Anep!</div>
-        <!-- Paparan last interaction -->
         <div id="last-interaction">Last interaction: —</div>
+        <div id="streak-display">Streak: 0 hari 🔥</div>
 
         <div class="buttons">
             <button onclick="feedPet()">Beri Makan 🍔</button>
             <button onclick="petPet()">Pujuk 🤗</button>
             <button onclick="sendKiss()">Send Kiss 😘</button>
-            <!-- Daily reward button -->
-            <button class="daily-btn" onclick="claimDaily()">Daily Snack 🎁</button>
+            <button id="dailyBtn" class="pulse" onclick="claimDaily()">Daily Snack 🎁</button>
         </div>
 
         <div class="small-note" id="daily-note"></div>
     </div>
 
+    <!-- reward popup -->
+    <div id="rewardPopup" aria-hidden="true">
+        <div class="big">+20</div>
+        <div>
+            <div style="font-weight:700">Daily Snack!</div>
+            <div style="font-size:0.9rem;color:#666">Streak: <span id="popup-streak">0</span> hari</div>
+        </div>
+    </div>
+
+    <!-- confetti canvas -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- optional short sounds (small files expected), you can replace src with your local files -->
+    <audio id="sfxClaim" src="sfx/claim.mp3" preload="auto"></audio>
+    <audio id="sfxPop" src="sfx/pop.mp3" preload="auto"></audio>
+
 <script>
-    const petDisplay = document.getElementById('pet-display');
-    const statusMessage = document.getElementById('status-message');
-    const healthBar = document.getElementById('health-bar');
-    const lastInteractionEl = document.getElementById('last-interaction');
-    const dailyNote = document.getElementById('daily-note');
+/* ========== Existing app state (kept) ========== */
+const petDisplay = document.getElementById('pet-display');
+const statusMessage = document.getElementById('status-message');
+const healthBar = document.getElementById('health-bar');
+const lastInteractionEl = document.getElementById('last-interaction');
+const streakDisplay = document.getElementById('streak-display');
+const dailyNote = document.getElementById('daily-note');
+const dailyBtn = document.getElementById('dailyBtn');
+const rewardPopup = document.getElementById('rewardPopup');
+const popupStreak = document.getElementById('popup-streak');
 
-    // Status awal (skala 0 hingga 100)
-    let health = 100;
-    let lastInteraction = null; // ISO timestamp, disimpan dalam localStorage
-    // key untuk last claim daily (simpan tarikh YYYY-MM-DD)
-    const LAST_CLAIM_KEY = 'pet_lastClaimDate';
+let health = 100;
+let lastInteraction = null;
 
-    function changeImage(imageSrc) {
-        petDisplay.src = imageSrc;
+// keys
+const LAST_CLAIM_KEY = 'pet_lastClaimDate';
+const STREAK_KEY = 'pet_streakCount';
+
+// sound control
+const sfxClaim = document.getElementById('sfxClaim');
+const sfxPop = document.getElementById('sfxPop');
+let soundEnabled = true;
+const soundToggle = document.getElementById('soundToggle');
+soundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+});
+
+/* ========== confetti (simple particles) ========== */
+const confettiCanvas = document.getElementById('confettiCanvas');
+const cc = confettiCanvas;
+const ctx = cc.getContext('2d');
+function resizeConfetti() { cc.width = innerWidth; cc.height = innerHeight; }
+window.addEventListener('resize', resizeConfetti);
+resizeConfetti();
+
+function burstConfetti() {
+    const parts = [];
+    const colors = ['#ff69b4','#ff1493','#ffd700','#ffd1e6'];
+    for (let i=0;i<60;i++){
+        parts.push({
+            x: innerWidth/2 + (Math.random()-0.5)*160,
+            y: innerHeight/3 + (Math.random()-0.5)*60,
+            vx: (Math.random()-0.5)*8,
+            vy: - (2 + Math.random()*6),
+            r: 3 + Math.random()*6,
+            color: colors[Math.floor(Math.random()*colors.length)],
+            rot: Math.random()*360,
+            vr: (Math.random()-0.5)*6
+        });
     }
-
-    // util: dapatkan nama fail dari src
-    function getFileNameFromSrc(src) {
-        try {
-            const parts = src.split('/');
-            return parts[parts.length - 1].split('?')[0].split('#')[0];
-        } catch (e) {
-            return src;
+    let t=0;
+    const anim = setInterval(()=> {
+        ctx.clearRect(0,0,cc.width,cc.height);
+        for (const p of parts){
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.18; // gravity
+            p.rot += p.vr;
+            ctx.save();
+            ctx.translate(p.x,p.y);
+            ctx.rotate(p.rot * Math.PI/180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r*1.6);
+            ctx.restore();
         }
-    }
+        t++;
+        if (t>80){ clearInterval(anim); ctx.clearRect(0,0,cc.width,cc.height); }
+    }, 16);
+}
 
-    // Save state ke localStorage (masukkan lastInteraction)
-    function saveState() {
-        try {
-            const state = {
-                health: health,
-                lastImage: getFileNameFromSrc(petDisplay.src || 'ratna_normal.png'),
-                status: statusMessage.textContent || '',
-                lastInteraction: lastInteraction || null
-            };
-            localStorage.setItem('petState', JSON.stringify(state));
-        } catch (e) {
-            console.warn('saveState error', e);
+/* ========== helper utilities ========== */
+function getFileNameFromSrc(src){
+    try{ const parts = src.split('/'); return parts[parts.length-1].split('?')[0].split('#')[0]; }catch(e){ return src; }
+}
+function changeImage(imageSrc){ petDisplay.src = imageSrc; }
+function saveState(){
+    try {
+        const state = {
+            health: health,
+            lastImage: getFileNameFromSrc(petDisplay.src || 'ratna_normal.png'),
+            status: statusMessage.textContent || '',
+            lastInteraction: lastInteraction || null
+        };
+        localStorage.setItem('petState', JSON.stringify(state));
+    } catch(e){}
+}
+function loadState(){
+    try {
+        const raw = localStorage.getItem('petState');
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (saved && typeof saved === 'object'){
+            if (typeof saved.health === 'number') health = Math.max(0, Math.min(100, saved.health));
+            if (saved.lastImage) changeImage(saved.lastImage);
+            if (saved.status) statusMessage.textContent = saved.status;
+            if (saved.lastInteraction) lastInteraction = saved.lastInteraction;
         }
-    }
+    } catch(e){}
+}
 
-    // Load state dari localStorage
-    (function loadState() {
-        try {
-            const raw = localStorage.getItem('petState');
-            if (!raw) {
-                updateLastInteractionDisplay();
-                return;
-            }
-            const saved = JSON.parse(raw);
-            if (saved && typeof saved === 'object') {
-                if (typeof saved.health === 'number') health = Math.max(0, Math.min(100, saved.health));
-                if (saved.lastImage) changeImage(saved.lastImage);
-                if (saved.status) statusMessage.textContent = saved.status;
-                if (saved.lastInteraction) lastInteraction = saved.lastInteraction;
-            }
-        } catch (e) {
-            console.warn('loadState error', e);
+/* ========== streak utilities ========== */
+function getStreak(){ return Number(localStorage.getItem(STREAK_KEY) || 0); }
+function setStreak(n){ localStorage.setItem(STREAK_KEY, String(n)); streakDisplay.textContent = `Streak: ${n} hari 🔥`; popupStreak.textContent = n; }
+
+/* ========== last interaction display ========== */
+function setLastInteractionNow(){ lastInteraction = new Date().toISOString(); }
+function updateLastInteractionDisplay(){
+    if (!lastInteraction){ lastInteractionEl.textContent = 'Last interaction: —'; return; }
+    const d = new Date(lastInteraction);
+    lastInteractionEl.textContent = 'Last interaction: ' + d.toLocaleString();
+}
+
+/* ========== countdown helper to next local midnight ========== */
+function msUntilNextDayLocal(){
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return tomorrow - now;
+}
+/* update daily button availability on load */
+function updateDailyAvailabilityUI(){
+    try {
+        const todayStr = new Date().toISOString().slice(0,10);
+        const lastClaim = localStorage.getItem(LAST_CLAIM_KEY);
+        if (lastClaim === todayStr){
+            // already claimed today
+            dailyBtn.disabled = true;
+            dailyBtn.classList.remove('pulse');
+            // show countdown
+            startDailyCountdown();
+            dailyNote.textContent = 'Daily Snack sudah dituntut hari ini.';
+        } else {
+            dailyBtn.disabled = false;
+            dailyBtn.classList.add('pulse');
+            dailyNote.textContent = 'Daily Snack tersedia. Tuntut sekali sehari.';
+            stopDailyCountdown();
         }
-        updateLastInteractionDisplay();
-    })();
+    } catch(e){}
+}
 
-    // set lastInteraction to now (ISO)
-    function setLastInteractionNow() {
-        lastInteraction = new Date().toISOString();
-    }
-
-    // paparkan lastInteraction dalam format lebih mesra
-    function updateLastInteractionDisplay() {
-        if (!lastInteraction) {
-            lastInteractionEl.textContent = 'Last interaction: —';
+/* countdown to enable button (update UI each second) */
+let countdownTimer = null;
+function startDailyCountdown(){
+    stopDailyCountdown();
+    function tick(){
+        const ms = msUntilNextDayLocal();
+        if (ms <= 0){
+            dailyBtn.disabled = false;
+            dailyBtn.classList.add('pulse');
+            dailyNote.textContent = 'Daily Snack tersedia. Tuntut sekali sehari.';
+            stopDailyCountdown();
             return;
         }
-        try {
-            const d = new Date(lastInteraction);
-            // paparkan sebagai tarikh & masa tempatan (browser)
-            lastInteractionEl.textContent = 'Last interaction: ' + d.toLocaleString();
-        } catch (e) {
-            lastInteractionEl.textContent = 'Last interaction: ' + lastInteraction;
+        // format hh:mm:ss
+        const sec = Math.floor(ms/1000);
+        const h = Math.floor(sec/3600).toString().padStart(2,'0');
+        const m = Math.floor(sec%3600/60).toString().padStart(2,'0');
+        const s = Math.floor(sec%60).toString().padStart(2,'0');
+        dailyNote.textContent = `Daily sudah tuntut. Seterusnya dalam ${h}:${m}:${s}`;
+    }
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+}
+function stopDailyCountdown(){ if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; } }
+
+/* ========== reward popup display ========== */
+function showRewardPopup(duration=1600){
+    rewardPopup.classList.add('show');
+    rewardPopup.setAttribute('aria-hidden','false');
+    if (soundEnabled) {
+        try{ sfxClaim.currentTime = 0; sfxClaim.play().catch(()=>{}); }catch(e){}
+    }
+    setTimeout(()=> {
+        rewardPopup.classList.remove('show');
+        rewardPopup.setAttribute('aria-hidden','true');
+    }, duration);
+}
+
+/* ========== claimDaily (enhanced) ========== */
+function claimDaily(){
+    try {
+        const today = new Date().toISOString().slice(0,10);
+        const lastClaim = localStorage.getItem(LAST_CLAIM_KEY); // e.g. '2025-12-03'
+        if (lastClaim === today){
+            // shouldn't happen because button disabled, but safe
+            dailyNote.textContent = 'Anda sudah tuntut Daily Snack hari ini. Sila cuba esok.';
+            return;
         }
-    }
-
-    // daily reward logic: satu tuntutan setiap hari (berdasarkan tarikh setempat)
-    function claimDaily() {
-        try {
-            const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-            const lastClaim = localStorage.getItem(LAST_CLAIM_KEY); // contoh '2025-12-03'
-            if (lastClaim === today) {
-                dailyNote.textContent = 'Anda sudah tuntut Daily Snack hari ini. Sila cuba esok.';
-                return;
-            }
-            // beri bonus +20 health (boleh ubah)
-            health = Math.min(100, health + 20);
-            updatePetStatus('Daily Snack! +20 🎁');
-            // kemaskini last claim
-            localStorage.setItem(LAST_CLAIM_KEY, today);
-            // rekod interaksi sebagai tuntutan harian juga
-            setLastInteractionNow();
-            saveState();
-            updateLastInteractionDisplay();
-            dailyNote.textContent = 'Berjaya tuntut! Datang lagi esok.';
-        } catch (e) {
-            console.warn('claimDaily error', e);
-            dailyNote.textContent = 'Tidak boleh tuntut sekarang, cuba lagi kemudian.';
-        }
-    }
-
-    // Fungsi interaksi asal, tambah update lastInteraction dan saveState
-    function feedPet() {
-        health = Math.min(100, health + 15);
-        updatePetStatus("Yummy! Masyeh Anep! 😋");
-        changeImage('ratna_makan.png');
-        petDisplay.style.transform = 'translateY(-10px)'; 
-        setTimeout(() => { petDisplay.style.transform = 'translateY(0px)'; }, 300);
-
-        setLastInteractionNow();
-        saveState();
-        updateLastInteractionDisplay();
-    }
-
-    function petPet() {
-        health = Math.min(100, health + 10);
-        updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
-        changeImage('ratna_gembira.png');
-        petDisplay.style.transform = 'rotate(-5deg)'; 
-        setTimeout(() => {
-            petDisplay.style.transform = 'rotate(5deg)';
-            setTimeout(() => { petDisplay.style.transform = 'rotate(0deg)'; }, 100);
-        }, 100);
-
-        setLastInteractionNow();
-        saveState();
-        updateLastInteractionDisplay();
-    }
-
-    function sendKiss() {
-        health = Math.min(100, health + 5);
-        updatePetStatus("Muaahh! 💖");
-        changeImage('ratna_kiss.png');
-        petDisplay.style.transform = 'scale(1.2)';
-        petDisplay.style.borderColor = '#FF0000';
-
-        setTimeout(() => {
-            petDisplay.style.transform = 'scale(1)';
-            petDisplay.style.borderColor = '#ff69b4';
-        }, 500);
-
-        setLastInteractionNow();
-        saveState();
-        updateLastInteractionDisplay();
-    }
-
-    function updatePetStatus(message) {
-        statusMessage.textContent = message;
-        healthBar.style.width = `${health}%`;
-        healthBar.textContent = `${health}% Mood Titew`;
-        
-        if (health < 30) {
-            statusMessage.style.color = 'red';
-        } else {
-            statusMessage.style.color = '#ff69b4';
-        }
-
-        // save state for decay updates etc (but lastInteraction not changed here)
-        saveState();
-    } 
-
-    // decay
-    setInterval(() => {
-        health = Math.max(0, health - 2);
-        
-        if (health === 0) {
-            updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀");
-            changeImage('ratna_normal.png');
-        } else {
-            updatePetStatus("Nak attention pwiss! 🥺"); 
-            if (!petDisplay.src.includes('ratna_normal.png') && 
-                !petDisplay.src.includes('ratna_makan.png') && 
-                !petDisplay.src.includes('ratna_gembira.png') && 
-                !petDisplay.src.includes('ratna_kiss.png')) {
-                     changeImage('ratna_normal.png');
-            }
-        }
-
-    }, 3000); // setiap 3 saat
-
-    // simpan sebelum tab ditutup
-    window.addEventListener('beforeunload', () => {
-        saveState();
-    });
-
-    // paparan awal
-    updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊");
-    changeImage('ratna_normal.png');
-    updateLastInteractionDisplay();
-
-    // optional: tampilkan nota sama ada daily sudah dituntut hari ini semasa load
-    (function updateDailyNoteOnLoad(){
-        try {
-            const today = new Date().toISOString().slice(0,10);
-            const lastClaim = localStorage.getItem(LAST_CLAIM_KEY);
-            if (lastClaim === today) {
-                dailyNote.textContent = 'Daily Snack sudah dituntut hari ini.';
+        // update streak: if lastClaim was yesterday -> streak++ else reset to 1
+        let streak = getStreak();
+        if (lastClaim){
+            // check if lastClaim equals yesterday local date
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yStr = yesterday.toISOString().slice(0,10);
+            if (lastClaim === yStr) {
+                streak = streak + 1;
             } else {
-                dailyNote.textContent = 'Daily Snack tersedia. Tuntut sekali sehari.';
+                streak = 1;
             }
-        } catch(e){}
-    })();
+        } else {
+            streak = 1;
+        }
+        setStreak(streak);
+
+        // reward: +20 health
+        health = Math.min(100, health + 20);
+        updatePetStatus('Daily Snack! +20 🎁');
+        // record claim
+        localStorage.setItem(LAST_CLAIM_KEY, today);
+        setLastInteractionNow();
+        saveState();
+        updateLastInteractionDisplay();
+
+        // UX: show popup, confetti, sound, disable button and start countdown
+        showRewardPopup();
+        burstConfetti();
+        if (soundEnabled) try{ sfxPop.currentTime = 0; sfxPop.play().catch(()=>{}); }catch(e){}
+
+        dailyBtn.disabled = true;
+        dailyBtn.classList.remove('pulse');
+        startDailyCountdown();
+
+        // small note
+        dailyNote.textContent = 'Berjaya tuntut! Datang lagi esok.';
+    } catch (e) {
+        console.warn('claimDaily error', e);
+        dailyNote.textContent = 'Tidak boleh tuntut sekarang, cuba lagi kemudian.';
+    }
+}
+
+/* ========== original interactions (kept) ========== */
+function updatePetStatus(message){
+    statusMessage.textContent = message;
+    healthBar.style.width = `${health}%`;
+    healthBar.textContent = `${health}% Mood Titew`;
+    if (health < 30) statusMessage.style.color = 'red'; else statusMessage.style.color = '#ff69b4';
+    saveState();
+}
+
+function feedPet(){
+    health = Math.min(100, health + 15);
+    updatePetStatus("Yummy! Masyeh Anep! 😋");
+    changeImage('ratna_makan.png');
+    petDisplay.style.transform = 'translateY(-10px)';
+    setTimeout(()=> petDisplay.style.transform='translateY(0px)', 300);
+    setLastInteractionNow(); saveState(); updateLastInteractionDisplay();
+}
+function petPet(){
+    health = Math.min(100, health + 10);
+    updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
+    changeImage('ratna_gembira.png');
+    petDisplay.style.transform = 'rotate(-5deg)';
+    setTimeout(()=>{ petDisplay.style.transform='rotate(5deg)'; setTimeout(()=>petDisplay.style.transform='rotate(0deg)',100); }, 100);
+    setLastInteractionNow(); saveState(); updateLastInteractionDisplay();
+}
+function sendKiss(){
+    health = Math.min(100, health + 5);
+    updatePetStatus("Muaahh! 💖");
+    changeImage('ratna_kiss.png');
+    petDisplay.style.transform = 'scale(1.2)';
+    petDisplay.style.borderColor = '#FF0000';
+    setTimeout(()=>{ petDisplay.style.transform='scale(1)'; petDisplay.style.borderColor='#ff69b4'; }, 500);
+    setLastInteractionNow(); saveState(); updateLastInteractionDisplay();
+}
+
+/* ========== decay logic (kept) ========== */
+setInterval(()=> {
+    health = Math.max(0, health - 2);
+    if (health === 0){
+        updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀");
+        changeImage('ratna_normal.png');
+    } else {
+        updatePetStatus("Nak attention pwiss! 🥺");
+        if (!petDisplay.src.includes('ratna_normal.png') &&
+            !petDisplay.src.includes('ratna_makan.png') &&
+            !petDisplay.src.includes('ratna_gembira.png') &&
+            !petDisplay.src.includes('ratna_kiss.png')) {
+            changeImage('ratna_normal.png');
+        }
+    }
+}, 3000);
+
+/* ========== init on load ========== */
+loadState();
+// init streak display if absent
+if (!localStorage.getItem(STREAK_KEY)) setStreak(0); else setStreak(getStreak());
+updateLastInteractionDisplay();
+updateDailyAvailabilityUI();
+
+// save before unload
+window.addEventListener('beforeunload', ()=> saveState());
 </script>
 </body>
 </html>
