@@ -16,16 +16,13 @@
 </head>
 <body>
   <div class="box" role="main" aria-label="Private gate">
-    <h2>Private Access</h2>
-    <p>Masukkan kata laluan untuk akses.</p>
-    <input id="pw" type="password" placeholder="Kata laluan" autocomplete="current-password" />
+    <h2>VIP Access: Boyfriend Edition</h2>
+    <p>Masukkan kata kunci, macam awak kunci hati saya.</p>
+    <input id="pw" type="password" placeholder="Birthday Cinta Hati" autocomplete="current-password" />
     <div class="row">
-      <input id="remember" type="checkbox" />
-      <label for="remember" style="font-size:14px">Ingat saya pada komputer ini</label>
     </div>
     <button id="go">Buka</button>
-    <div id="err">Kata laluan salah.</div>
-    <div class="hint">Jika BF anda login sekali dan tick "Ingat saya", dia tidak perlu login lagi.</div>
+    <div id="err">Dah Tak Ingat Birthday Saya Ke!</div>
   </div>
 
 <script>
@@ -77,7 +74,7 @@
     } else {
       const e = document.getElementById('err');
       e.style.display = 'block';
-      e.textContent = 'Kata laluan salah.';
+      e.textContent = 'Dah Tak Ingat Birthday Saya Ke!';
     }
   });
 
@@ -93,3 +90,4 @@
 </script>
 </body>
 </html>
+
