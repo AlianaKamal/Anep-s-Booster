@@ -269,86 +269,7 @@ if (typeof window.feedPet === 'function' && typeof window.petPet === 'function' 
     } catch(e){
       console.warn('loadStored failed', e);
     }
-     /* --- Compatibility + lastImage/status persistence --- */
-/* helper: dapatkan nama fail dari src penuh */
-function getFileNameFromSrc(src){
-  try {
-    if(!src) return '';
-    // window.location may be included, hanya ambil last segment
-    return src.split('/').pop().split('?')[0].split('#')[0];
-  } catch(e){ return src || ''; }
-}
-
-/* restore old key 'petState' if exists (backwards compatibility) */
-try {
-  const legacy = JSON.parse(localStorage.getItem('petState') || '{}');
-  if (legacy && typeof legacy === 'object') {
-    // health
-    if (legacy.health !== undefined) {
-      state.health = legacy.health;
-      if (typeof window.health !== 'undefined') window.health = state.health;
-      const hb = document.getElementById('health-bar');
-      if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
-    }
-
-    // lastImage (nama fail sahaja). We try to set it if file exists or if changeImage works with filename
-    if (legacy.lastImage) {
-      // If legacy.lastImage already a full path, use it; otherwise try filename directly
-      const imgCandidate = legacy.lastImage;
-      try {
-        // only call if function exists
-        if (typeof changeImage === 'function') {
-          // attempt to set using saved value. If your files are in sfx/ or images/, adjust below
-          changeImage(imgCandidate);
-          // small check: if image didn't change (browser might keep previous src), fallback to filename
-          // no further action needed; user can adjust path if files located in a subfolder
-        }
-      } catch(e){ /* ignore */ }
-    }
-
-    // status text
-    if (legacy.status) {
-      try {
-        if (typeof updatePetStatus === 'function') {
-          updatePetStatus(legacy.status);
-        } else {
-          const sm = document.getElementById('status-message');
-          if (sm) sm.textContent = legacy.status;
-        }
-      } catch(e){}
-    }
-  }
-} catch(e){
-  console.warn('failed to parse legacy petState', e);
-}
-
-/* Enhance existing saveState: also write legacy-friendly 'petState' with lastImage and status. 
-   This wraps existing saveState (if defined) or defines safe one otherwise.
-*/
-(function enhanceSave(){
-  // keep ref to original saveState if present in this scope
-  const oldSave = (typeof saveState === 'function') ? saveState : null;
-
-  window.saveState = function(){
-    try {
-      // call original if exists (this will store petState_v2 etc.)
-      if (oldSave) oldSave();
-    } catch(e){ console.warn('oldSave failed', e); }
-
-    // now write legacy 'petState' key (stores lastImage, status, lastSaved)
-    try {
-      const payload = {
-        health: (typeof state !== 'undefined' && state.health !== undefined) ? state.health : (typeof health !== 'undefined' ? health : null),
-        lastImage: (typeof petDisplay !== 'undefined' && petDisplay.src) ? getFileNameFromSrc(petDisplay.src) : '',
-        status: (typeof statusMessage !== 'undefined' && statusMessage.textContent) ? statusMessage.textContent : '',
-        lastSaved: new Date().toISOString()
-      };
-      localStorage.setItem('petState', JSON.stringify(payload));
-    } catch(e){
-      console.warn('saving legacy petState failed', e);
-    }
-  };
-})();
+  })();
 
   // AUDIO SETUP — keep using your existing file names (change paths if in folder)
   const sFeed = new Audio('sfxeat.mp3.wav');   // feed
@@ -536,4 +457,3 @@ try {
 
 </body>
 </html>
-
