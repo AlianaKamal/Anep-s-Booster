@@ -91,10 +91,71 @@
 
     // Status awal (skala 0 hingga 100)
     let health = 100;
+    // Last interaction timestamp (ISO string) - akan disimpan ke localStorage
+    let lastInteraction = null;
+
     // Fungsi utiliti untuk tukar gambar
     function changeImage(imageSrc) {
         petDisplay.src = imageSrc;
     }
+
+    // --- START localStorage additions ---
+    // helper: dapatkan nama fail dari src (selamat jika src penuh URL)
+    function getFileNameFromSrc(src) {
+        try {
+            const parts = src.split('/');
+            return parts[parts.length - 1].split('?')[0].split('#')[0];
+        } catch (e) {
+            return src;
+        }
+    }
+
+    // Save state to localStorage (masukkan lastInteraction)
+    function saveState() {
+        try {
+            const state = {
+                health: health,
+                lastImage: getFileNameFromSrc(petDisplay.src || 'ratna_normal.png'),
+                status: statusMessage.textContent || '',
+                lastInteraction: lastInteraction // ISO timestamp or null
+            };
+            localStorage.setItem('petState', JSON.stringify(state));
+        } catch (e) {
+            // ignore quota or other errors quietly
+            console.warn('saveState error', e);
+        }
+    }
+
+    // Load state from localStorage (if ada)
+    (function loadState() {
+        try {
+            const raw = localStorage.getItem('petState');
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (saved && typeof saved === 'object') {
+                if (typeof saved.health === 'number') health = Math.max(0, Math.min(100, saved.health));
+                if (saved.lastImage) {
+                    // gunakan nama fail sahaja; kalau anda simpan path penuh, ini masih berfungsi
+                    changeImage(saved.lastImage);
+                }
+                if (saved.status) statusMessage.textContent = saved.status;
+                if (saved.lastInteraction) lastInteraction = saved.lastInteraction;
+            }
+        } catch (e) {
+            console.warn('loadState error', e);
+        }
+    })();
+
+    // Update lastInteraction helper
+    function setLastInteractionNow() {
+        lastInteraction = new Date().toISOString();
+    }
+
+    // Save before unload (browser/tab close)
+    window.addEventListener('beforeunload', () => {
+        saveState();
+    });
+    // --- END localStorage additions ---
 
     // Fungsi apabila memberi makan
     function feedPet() {
@@ -104,6 +165,10 @@
         // Animasi melantun kecil
         petDisplay.style.transform = 'translateY(-10px)'; 
         setTimeout(() => { petDisplay.style.transform = 'translateY(0px)'; }, 300);
+
+        // simpan state (kemaskini lastInteraction)
+        setLastInteractionNow();
+        saveState();
     }
 
     // Fungsi apabila membelai
@@ -117,6 +182,10 @@
             petDisplay.style.transform = 'rotate(5deg)';
             setTimeout(() => { petDisplay.style.transform = 'rotate(0deg)'; }, 100);
         }, 100);
+
+        // simpan state (kemaskini lastInteraction)
+        setLastInteractionNow();
+        saveState();
     }
 
     // Fungsi baharu: Hantar Ciuman
@@ -132,6 +201,10 @@
             petDisplay.style.transform = 'scale(1)';
             petDisplay.style.borderColor = '#ff69b4'; // Kembali ke warna asal
         }, 500);
+
+        // simpan state (kemaskini lastInteraction)
+        setLastInteractionNow();
+        saveState();
     }
 
     // Fungsi untuk kemas kini paparan dan mesej
@@ -145,6 +218,10 @@
         } else {
             statusMessage.style.color = '#ff69b4';
         }
+
+        // save state also when status updated (covers decay updates)
+        // NOTE: we do not change lastInteraction here so timestamp stays as last user action
+        saveState();
     } 
 
     /* FUNGSI animatePet() ASAL DIBUANG KERANA LOGIK BARU SUDAH DILETAKKAN DALAM FUNGSI INTERAKSI */
@@ -175,28 +252,6 @@
     // Pastikan imej awal adalah normal
     changeImage('ratna_normal.png');
 
-    // load state
-const saved = JSON.parse(localStorage.getItem('petState') || '{}');
-if (saved.health !== undefined) health = saved.health;
-if (saved.lastImage) changeImage(saved.lastImage);
-updatePetStatus(saved.status || "Hai Anep! Jaga Titew baik-baik ya! 😊");
-
-// save state function
-function saveState() {
-  localStorage.setItem('petState', JSON.stringify({
-    health, lastImage: getFileNameFromSrc(petDisplay.src), status: statusMessage.textContent,
-    lastSaved: new Date().toISOString()
-  }));
-}
-
-// call saveState setiap kali ada interaction
-function feedPet(){ /*...*/ saveState(); }
-function petPet(){ /*...*/ saveState(); }
-function sendKiss(){ /*...*/ saveState(); }
-
 </script>
 </body>
 </html>
-
-
-
