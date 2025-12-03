@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mood Booster — Dev</title>
+<style>
+:root{--pink:#ff69b4;--hotpink:#ff1493;--bg:#ffe4e1;--card-bg:#fff;--muted:#f0f0f0;--text:#111}
+[data-theme="dark"]{--bg:#1b1220;--card-bg:#241726;--muted:#2b1c2a;--pink:#ff9acb;--hotpink:#ff6ea6;--text:#f6eef6}
+html,body{height:100%}body{background:var(--bg);color:var(--text);font-family:Poppins,system-ui,Arial;margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
+.container{background:var(--card-bg);padding:22px;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,0.08);width:880px;max-width:calc(100% - 40px);display:flex;gap:18px}
+.left{width:640px}
+.right{width:200px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.avatar-wrap{width:140px;height:140px;border-radius:50%;padding:6px;border:6px solid var(--pink);display:flex;align-items:center;justify-content:center;margin:0 auto}
+#pet-display{width:120px;height:120px;border-radius:50%;object-fit:cover}
+.meter{width:100%;background:var(--muted);border-radius:12px;padding:4px;margin-top:10px}
+.progress{height:22px;width:50%;background:linear-gradient(90deg,var(--hotpink),var(--pink));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;transition:width .45s}
+.buttons{display:flex;gap:10px;justify-content:center;margin-top:10px}
+.buttons button{padding:8px 12px;border-radius:8px;border:none;background:var(--pink);color:#fff;cursor:pointer;font-weight:700}
+#status-message{color:var(--pink);font-weight:600;margin-top:8px;min-height:1.2em;text-align:center}
+#last-interaction{font-size:12px;color:rgba(0,0,0,0.55);text-align:center;margin-top:6px}
+.dev-panel{background:rgba(0,0,0,0.03);padding:10px;border-radius:10px;width:100%}
+.dev-panel button{width:100%;margin-top:6px;padding:8px;border-radius:8px;border:none;cursor:pointer}
+#log{height:120px;background:#fff;padding:6px;border-radius:8px;overflow:auto;font-size:12px;border:1px solid #eee}
+canvas{pointer-events:none}
+#themeToggle{position:fixed;right:12px;top:12px;background:transparent;border:2px solid rgba(255,255,255,0.12);padding:8px 10px;border-radius:10px;cursor:pointer}
+</style>
+</head>
+<body>
+<button id="themeToggle" aria-label="Toggle theme">🌙</button>
+<div class="container">
+  <div class="left">
+    <h2 style="margin:0 0 6px">DEV — Mood Booster</h2>
+    <div class="avatar-wrap"><img id="pet-display" src="ratna_normal.png" alt="pet"></div>
+    <div class="meter"><div id="health-bar" class="progress">Kesihatan</div></div>
+    <div id="status-message">Hai Anep!</div>
+    <div id="last-interaction">Last: -</div>
+    <div class="buttons">
+      <button onclick="feedPet()">Beri Makan 🍔</button>
+      <button onclick="petPet()">Pujuk 🤗</button>
+      <button onclick="sendKiss()">Send Kiss 😘</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="dev-panel" aria-hidden="false">
+      <div style="font-weight:700;margin-bottom:6px">Dev tools</div>
+      <button id="importStable">Import stable → Dev</button>
+      <button id="promoteStable" style="background:#7bd389">Promote Dev → Stable</button>
+      <button id="resetDev" style="background:#ff9aa2">Reset Dev State</button>
+      <div style="font-weight:700;margin-top:8px">Logs</div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<canvas id="confettiCanvas" style="position:fixed;left:0;top:0;width:100%;height:100%;z-index:9999;"></canvas>
+
+<script>
+/* Core app (same as stable) */
+const petDisplay = document.getElementById('pet-display');
+const statusMessage = document.getElementById('status-message');
+const healthBar = document.getElementById('health-bar');
+let health = 100;
+function changeImage(src){ petDisplay.src = src; }
+
+function feedPet(){
+  health = Math.min(100, health + 15);
+  updatePetStatus("Yummy! Masyeh Anep! 😋");
+  changeImage('ratna_makan.png');
+  petDisplay.style.transform = 'translateY(-10px)'; setTimeout(()=>petDisplay.style.transform='translateY(0px)',300);
+}
+function petPet(){
+  health = Math.min(100, health + 10);
+  updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
+  changeImage('ratna_gembira.png'); petDisplay.style.transform='rotate(-5deg)';
+  setTimeout(()=>{petDisplay.style.transform='rotate(5deg)'; setTimeout(()=>petDisplay.style.transform='rotate(0deg)',100);},100);
+}
+function sendKiss(){
+  health = Math.min(100, health + 5);
+  updatePetStatus("Muaahh! 💖"); changeImage('ratna_kiss.png');
+  petDisplay.style.transform='scale(1.2)'; petDisplay.style.borderColor='#FF0000';
+  setTimeout(()=>{petDisplay.style.transform='scale(1)'; petDisplay.style.borderColor='';},500);
+}
+function updatePetStatus(msg){
+  statusMessage.textContent = msg;
+  healthBar.style.width = `${health}%`;
+  healthBar.textContent = `${health}% Mood Titew`;
+  if (health < 30) statusMessage.style.color='red'; else statusMessage.style.color='var(--pink)';
+}
+setInterval(()=>{ health = Math.max(0, health - 2);
+  if (health === 0){ updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀"); changeImage('ratna_normal.png'); }
+  else { updatePetStatus("Nak attention pwiss! 🥺"); if (!petDisplay.src.includes('ratna_normal.png') && !petDisplay.src.includes('ratna_makan.png') && !petDisplay.src.includes('ratna_gembira.png') && !petDisplay.src.includes('ratna_kiss.png')) changeImage('ratna_normal.png'); }
+},3000);
+updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊"); changeImage('ratna_normal.png');
+</script>
+
+<!-- Integration: dev persistence + SFX + full particle effects (same visual as earlier final) -->
+<script>
+(function(){
+  const STORAGE_KEY = 'petState_dev';
+  const STABLE_KEY = 'petState_stable';
+  const confCanvas = document.getElementById('confettiCanvas');
+  const cctx = confCanvas.getContext ? confCanvas.getContext('2d') : null;
+  function resize(){ if(!cctx) return; confCanvas.width = innerWidth; confCanvas.height = innerHeight; }
+  addEventListener('resize',resize); resize();
+
+  // audio
+  const sFeed = new Audio('sfxeat.mp3.wav'), sPet = new Audio('sfxpurr.mp3.wav'), sKiss = new Audio('sfxkiss.mp3.wav');
+  [sFeed,sPet,sKiss].forEach(a=>{ a.preload='auto'; a.volume=0.9; });
+
+  function play(a){ try{ a.currentTime=0; a.play().catch(()=>{}); }catch(e){} }
+  function log(msg){ const el=document.getElementById('log'); el.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg + '\n' + el.textContent; }
+
+  // load dev state
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const parsed = JSON.parse(raw);
+      if(typeof parsed.health === 'number'){ health = parsed.health; healthBar.style.width = `${health}%`; healthBar.textContent = `${health}% Mood Titew`; }
+      if(parsed.lastInteraction) document.getElementById('last-interaction').textContent = 'Last: ' + new Date(parsed.lastInteraction).toLocaleString();
+      if(parsed.theme) document.documentElement.setAttribute('data-theme', parsed.theme);
+      log('Loaded dev state');
+    }catch(e){ console.warn(e); log('Load dev failed'); }
+  }
+  // save dev state
+  function save(){ try{ if(typeof health === 'number') {}; const payload = { health, lastInteraction: localStorage.getItem('pet_lastInteraction')||'', theme: document.documentElement.getAttribute('data-theme')||'light' }; localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); log('Saved dev state'); }catch(e){console.warn(e); log('Save dev failed'); } }
+  load();
+
+  // small particle functions (food, heart, sparkle) similar to earlier final
+  function heartBurst(x = innerWidth/2, y = innerHeight/3){
+    if(!cctx) return; const hearts=[]; const cols=['#ff4f8b','#ff8bb3','#ff6fa1','#ff2d6f'];
+    for(let i=0;i<18;i++) hearts.push({x,y,vx:(Math.random()-0.5)*6,vy:-Math.random()*6-2,size:8+Math.random()*14,color:cols[Math.floor(Math.random()*cols.length)],life:50+Math.floor(Math.random()*30),rot:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.08});
+    let t=0; const anim=setInterval(()=>{ cctx.clearRect(0,0,confCanvas.width,confCanvas.height); hearts.forEach(h=>{ h.x+=h.vx; h.y+=h.vy; h.vy+=0.18; h.rot+=h.rotSpeed; h.life--; const s=h.size; cctx.save(); cctx.translate(h.x,h.y); cctx.rotate(h.rot); cctx.fillStyle=h.color; cctx.beginPath(); cctx.moveTo(0,-s*0.6); cctx.bezierCurveTo(-s,-s*1.3,-s*1.2,s*0.2,0,s); cctx.bezierCurveTo(s*1.2,s*0.2,s,-s*1.3,0,-s*0.6); cctx.closePath(); cctx.fill(); cctx.restore(); }); t++; if(hearts.every(h=>h.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16); }
+
+  function foodBurst(x=innerWidth/2,y=innerHeight/3){
+    if(!cctx) return; const foods=["🍔","🍟","🍕"]; const parts=[]; for(let i=0;i<14;i++) parts.push({x,y,vx:(Math.random()-0.5)*8,vy:-Math.random()*6-2,size:20+Math.random()*22,emoji:foods[Math.floor(Math.random()*foods.length)],life:40+Math.random()*30,rot:(Math.random()-0.5)*0.6});
+    let t=0; const anim=setInterval(()=>{ cctx.clearRect(0,0,confCanvas.width,confCanvas.height); parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.25; p.rot+=0.02; p.life--; cctx.save(); cctx.translate(p.x,p.y); cctx.rotate(p.rot); cctx.font=`${p.size}px serif`; cctx.textAlign='center'; cctx.textBaseline='middle'; cctx.fillText(p.emoji,0,0); cctx.restore(); }); t++; if(parts.every(p=>p.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16); }
+
+  function sparkleBurst(x=innerWidth/2,y=innerHeight/3){
+    if(!cctx) return; const parts=[]; const cols=['#ffffff','#ffe6f2','#ff8ccd']; for(let i=0;i<28;i++) parts.push({x,y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5-1,size:1+Math.random()*5,color:cols[Math.floor(Math.random()*cols.length)],life:30+Math.random()*30,glow:0.6+Math.random()*0.8});
+    let t=0; const anim=setInterval(()=>{ cctx.clearRect(0,0,confCanvas.width,confCanvas.height); parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.life--; const g=cctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*3); g.addColorStop(0,p.color); g.addColorStop(0.6,p.color); g.addColorStop(1,'rgba(0,0,0,0)'); cctx.globalAlpha = Math.max(0,p.life/50); cctx.fillStyle = g; cctx.beginPath(); cctx.arc(p.x,p.y,p.size*2.2,0,Math.PI*2); cctx.fill(); cctx.globalAlpha=1; }); t++; if(parts.every(p=>p.life<=0)||t>120){ clearInterval(anim); cctx.clearRect(0,0,confCanvas.width,confCanvas.height); } },16); }
+
+  // wrap originals to add audio + particles + save
+  const ofeed = window.feedPet.bind(window), opet = window.petPet.bind(window), okiss = window.sendKiss.bind(window);
+  window.feedPet = function(...a){ ofeed(...a); if(typeof health==='number'){} play(sFeed); const r=petDisplay.getBoundingClientRect(); foodBurst(r.left + r.width/2, r.top + r.height/2); localStorage.setItem('pet_lastInteraction', new Date().toISOString()); save(); log('feedPet (dev)'); };
+  window.petPet = function(...a){ opet(...a); play(sPet); const r=petDisplay.getBoundingClientRect(); sparkleBurst(r.left + r.width/2, r.top + r.height/2); localStorage.setItem('pet_lastInteraction', new Date().toISOString()); save(); log('petPet (dev)'); };
+  window.sendKiss = function(...a){ okiss(...a); play(sKiss); const r=petDisplay.getBoundingClientRect(); heartBurst(r.left + r.width/2, r.top + r.height/2 - 10); localStorage.setItem('pet_lastInteraction', new Date().toISOString()); save(); log('sendKiss (dev)'); };
+
+  // dev panel actions
+  document.getElementById('importStable').addEventListener('click', ()=>{
+    try{
+      const raw = localStorage.getItem(STABLE_KEY);
+      if(!raw){ log('No stable state found to import'); return; }
+      localStorage.setItem(STORAGE_KEY, raw);
+      load(); log('Imported stable → dev (manual)');
+      alert('Imported stable state into dev (manual).');
+    }catch(e){ console.warn(e); log('Import failed'); }
+  });
+
+  document.getElementById('promoteStable').addEventListener('click', ()=>{
+    if(!confirm('Promote current DEV state to STABLE? This will overwrite stable state.')) return;
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY) || JSON.stringify({health, lastInteraction: localStorage.getItem('pet_lastInteraction')||'', theme: document.documentElement.getAttribute('data-theme')||'light'});
+      localStorage.setItem(STABLE_KEY, raw);
+      log('Promoted dev → stable (manual)');
+      alert('Dev state promoted to stable.');
+    }catch(e){ console.warn(e); log('Promote failed'); }
+  });
+
+  document.getElementById('resetDev').addEventListener('click', ()=>{
+    if(!confirm('Reset dev state to defaults?')) return;
+    try{
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('pet_lastInteraction');
+      health = 100; load(); save(); log('Dev state reset');
+    }catch(e){ console.warn(e); log('Reset failed'); }
+  });
+
+  // theme toggle
+  const themeBtn = document.getElementById('themeToggle');
+  themeBtn.addEventListener('click', ()=>{ const next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light':'dark'; document.documentElement.setAttribute('data-theme', next); save(); log('Theme toggled'); });
+
+  // save periodically
+  setInterval(save,5000);
+  addEventListener('beforeunload', save);
+  save();
+  log('Dev integration ready');
+})();
+</script>
+</body>
+</html>
