@@ -31,13 +31,12 @@
           align-items: center;
           height: 100vh;
           margin: 0;
-          font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+          font-family: "Poppins";
           text-align: center;
           overflow: auto;
           transition: background-color .25s, color .25s;
       }
 
-      /* Theme toggle (small) */
       #themeToggle {
         position: fixed;
         right: 12px;
@@ -52,7 +51,6 @@
         backdrop-filter: blur(4px);
       }
 
-      /* Card */
       .container {
           background-color: var(--card-bg);
           padding: 28px 32px;
@@ -64,11 +62,9 @@
           gap: 28px;
           align-items: center;
           justify-content: center;
-          flex-wrap: nowrap;
           transition: background-color .25s, box-shadow .25s;
       }
 
-      /* Left column: avatar + progress + buttons (centered column) */
       .left-col {
           width: 560px;
           display:flex;
@@ -76,548 +72,158 @@
           align-items:center;
           gap:14px;
       }
+
       h1{font-size:1.6rem;margin:0 0 4px;font-weight:700;color:var(--text)}
       .avatar-wrap{
           width:170px;height:170px;border-radius:50%;
           padding:6px;border:6px solid var(--pink);
           display:flex;align-items:center;justify-content:center;
-          background:linear-gradient(180deg, transparent, rgba(0,0,0,0.03));
-          box-shadow: 0 6px 18px rgba(0,0,0,0.06);
       }
 
-      /* Pet image */
       #pet-display {
           width:150px;
           height:150px;
           border-radius:50%;
           object-fit:cover;
-          transition: transform .25s, border-color .25s, opacity .3s;
+          transition: transform .25s, border-color .25s;
       }
 
-      /* progress */
-      .meter{ width:100%; background:var(--muted); border-radius:12px; padding:4px; box-sizing:border-box; }
+      .meter{ width:100%; background:var(--muted); border-radius:12px; padding:4px; }
       .progress{
-          height:26px; width: 50%; /* JS will update */
-          background:linear-gradient(90deg,var(--hotpink),var(--pink)); border-radius:10px;
-          display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;
-          transition: width 0.45s ease-in-out; font-size:0.92rem;
+          height:26px; width:50%;
+          background:linear-gradient(90deg,var(--hotpink),var(--pink));
+          border-radius:10px;
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-weight:700;
+          transition: width 0.45s ease-in-out;
       }
-      #status-message{ color:var(--pink); font-weight:600; margin-top:6px; min-height:1.2em; }
-      #last-interaction { font-size:12px; color: rgba(0,0,0,0.55); margin-top:6px; min-height:1.1em; }
-      [data-theme="dark"] #last-interaction { color: rgba(255,255,255,0.6); }
 
-      /* main buttons row */
+      #status-message{ color:var(--pink); font-weight:600; margin-top:6px; }
+      #last-interaction { font-size:12px; opacity:0.7; margin-top:4px; }
+
       .buttons{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
       .buttons button{
-          padding:10px 16px; border-radius:10px; border:none; background:var(--pink); color:#fff;
-          font-weight:600; cursor:pointer; box-shadow: 0 6px 12px rgba(255,105,180,0.12);
+          padding:10px 16px; border-radius:10px; border:none;
+          background:var(--pink); color:#fff;
+          font-weight:600; cursor:pointer;
       }
       .action-big { width:160px; }
-
-      /* reward visuals */
-      .reward-item {
-        position:absolute; pointer-events:none; width:64px; height:64px; transform:translate(-50%,-50%) scale(0.1);
-        transition: transform 450ms cubic-bezier(.2,.9,.2,1), opacity 350ms;
-        opacity:0; z-index:9998;
-        filter: drop-shadow(0 6px 12px rgba(0,0,0,0.18));
-      }
-
-      @media (max-width:780px){
-          .container{ flex-direction:column; width:94%; padding:20px; gap:16px;}
-          .left-col{ width:100%}
-      }
     </style>
 </head>
 <body>
 
-<!-- PASTE AT VERY TOP OF index.html -->
 <script>
   (function(){
     try {
       const TOKEN_KEY = 'mood_booster_auth_v1';
-      const DEFAULT_EXPIRY_MS = 1000*60*60*24*7; // keep in sync with gate
+      const DEFAULT_EXPIRY_MS = 1000*60*60*24*7;
       function isTokenValid(raw){
         if(!raw) return false;
-        const parts = raw.split(':');
-        if(parts[0] !== 'ok') return false;
-        if(parts[2] === 'perm') return true; // permanent remember
-        const ts = parseInt(parts[1]) || 0;
-        return (Date.now() - ts) < DEFAULT_EXPIRY_MS;
+        const p = raw.split(':');
+        if(p[0] !== 'ok') return false;
+        if(p[2] === 'perm') return true;
+        return (Date.now() - parseInt(p[1])) < DEFAULT_EXPIRY_MS;
       }
       const t = localStorage.getItem(TOKEN_KEY);
-      if (!isTokenValid(t)){
+      if(!isTokenValid(t)){
         localStorage.removeItem(TOKEN_KEY);
         location.replace('gate.html');
       }
-    } catch(e){
-      location.replace('gate.html');
-    }
+    }catch(e){ location.replace('gate.html'); }
   })();
 </script>
 
+<button id="themeToggle">🌙</button>
 
-  <!-- small theme toggle -->
-  <button id="themeToggle" aria-label="Toggle theme">🌙</button>
+<div class="container">
+  <div class="left-col">
+    <h1>Hi B (B for Brader)</h1>
 
-  <div class="container">
-    <div class="left-col">
-      <h1>Hi B (B for Brader)</h1>
+    <div class="avatar-wrap">
+      <img id="pet-display" src="ratna_normal.png">
+    </div>
 
-      <div class="avatar-wrap" aria-hidden="true">
-        <img id="pet-display" src="ratna_normal.png" alt="Gambar Pet Maya">
-      </div>
+    <div class="meter">
+      <div id="health-bar" class="progress">Kesihatan</div>
+    </div>
 
-      <div class="meter" aria-hidden="true" style="width:100%;">
-        <div id="health-bar" class="progress">Kesihatan</div>
-      </div>
+    <div id="status-message">Hai Anep!</div>
+    <div id="last-interaction">Last: -</div>
 
-      <div id="status-message">Hai Anep!</div>
-      <div id="last-interaction">Last: -</div>
-
-      <div class="buttons" role="group" aria-label="Kawalan pet">
-        <button onclick="feedPet()">Beri Makan 🍔</button>
-        <button onclick="petPet()">Pujuk 🤗</button>
-        <button onclick="sendKiss()" class="action-big">Send Kiss 😘</button>
-      </div>
+    <div class="buttons">
+      <button onclick="feedPet()">Beri Makan 🍔</button>
+      <button onclick="petPet()">Pujuk 🤗</button>
+      <button onclick="sendKiss()" class="action-big">Send Kiss 😘</button>
     </div>
   </div>
+</div>
 
-  <!-- confetti / particles canvas -->
-  <canvas id="confettiCanvas" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;"></canvas>
+<canvas id="confettiCanvas" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;"></canvas>
 
-  <!-- ===== Skrip Asal (TIDAK DIUBAH) ===== -->
 <script>
-    const petDisplay = document.getElementById('pet-display');
-    const statusMessage = document.getElementById('status-message');
-    const healthBar = document.getElementById('health-bar');
+let health = 100;
+const petDisplay = document.getElementById('pet-display');
+const statusMessage = document.getElementById('status-message');
+const healthBar = document.getElementById('health-bar');
 
-    // Status awal (skala 0 hingga 100)
-    let health = 100;
-    // Fungsi utiliti untuk tukar gambar
-    function changeImage(imageSrc) {
-        petDisplay.src = imageSrc;
-    }
+function changeImage(img){ petDisplay.src = img; }
 
-    // Fungsi apabila memberi makan
-    function feedPet() {
-        health = Math.min(100, health + 15);
-        updatePetStatus("Yummy! Masyeh Anep! 😋");
-        changeImage('ratna_makan.png'); // Tukar gambar makan
-        // Animasi melantun kecil
-        petDisplay.style.transform = 'translateY(-10px)'; 
-        setTimeout(() => { petDisplay.style.transform = 'translateY(0px)'; }, 300);
-    }
+function updatePetStatus(msg){
+  statusMessage.textContent = msg;
+  healthBar.style.width = health+"%";
+  healthBar.textContent = health+"% Mood Titew";
+}
 
-    // Fungsi apabila membelai
-    function petPet() {
-        health = Math.min(100, health + 10);
-        updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
-        changeImage('ratna_gembira.png'); // Tukar gambar gembira
-        // Animasi bergoncang (pusing)
-        petDisplay.style.transform = 'rotate(-5deg)'; 
-        setTimeout(() => {
-            petDisplay.style.transform = 'rotate(5deg)';
-            setTimeout(() => { petDisplay.style.transform = 'rotate(0deg)'; }, 100);
-        }, 100);
-    }
+function feedPet(){
+  health = Math.min(100, health+15);
+  updatePetStatus("Yummy! Masyeh Anep! 😋");
+  changeImage("ratna_makan.png");
+}
 
-    // Fungsi baharu: Hantar Ciuman
-    function sendKiss() {
-        health = Math.min(100, health + 5); // Ciuman pun baik untuk kesihatan!
-        updatePetStatus("Muaahh! 💖");
-        changeImage('ratna_kiss.png'); // Tukar gambar cium
-        // Animasi skala (zoom in/out)
-        petDisplay.style.transform = 'scale(1.2)';
-        petDisplay.style.borderColor = '#FF0000'; // Tukar border kepada merah cinta
+function petPet(){
+  health = Math.min(100, health+10);
+  updatePetStatus("Ocey, Tak Majuk Dah! 🥰");
+  changeImage("ratna_gembira.png");
+}
 
-        setTimeout(() => {
-            petDisplay.style.transform = 'scale(1)';
-            petDisplay.style.borderColor = '#ff69b4'; // Kembali ke warna asal
-        }, 500);
-    }
+function sendKiss(){
+  health = Math.min(100, health+5);
+  updatePetStatus("Muaahh! 💖");
+  changeImage("ratna_kiss.png");
+}
 
-    // Fungsi untuk kemas kini paparan dan mesej
-    function updatePetStatus(message) {
-        statusMessage.textContent = message;
-        healthBar.style.width = `${health}%`;
-        healthBar.textContent = `${health}% Mood Titew`;
-        
-        if (health < 30) {
-            statusMessage.style.color = 'red';
-        } else {
-            statusMessage.style.color = '#ff69b4';
-        }
-    } 
+setInterval(()=>{
+  health = Math.max(0, health-2);
+  if(health === 0){
+    updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀");
+    changeImage("ratna_normal.png");
+  }else{
+    updatePetStatus("Nak attention pwiss! 🥺");
+    changeImage("ratna_normal.png");
+  }
+},3000);
 
-    // Kesihatan berkurangan secara beransur-ansur dari masa ke masa
-    setInterval(() => {
-        health = Math.max(0, health - 2);
-        
-        if (health === 0) {
-            updatePetStatus("Oh No! Anep Dah Tak Sayang Saya! 💀");
-            changeImage('ratna_normal.png'); // Kembali ke gambar biasa bila tiada interaksi
-        } else {
-            updatePetStatus("Nak attention pwiss! 🥺"); 
-            if (!petDisplay.src.includes('ratna_normal.png') && 
-                !petDisplay.src.includes('ratna_makan.png') && 
-                !petDisplay.src.includes('ratna_gembira.png') && 
-                !petDisplay.src.includes('ratna_kiss.png')) {
-                     changeImage('ratna_normal.png');
-            }
-        }
-
-    }, 3000); // Setiap 3 saat
-
-    // Muatkan status awal
-    updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊");
-    changeImage('ratna_normal.png');
-
+updatePetStatus("Hai Anep! Jaga Titew baik-baik ya! 😊");
 </script>
 
-  <!-- Integration Block (UPDATED + Particle Effects + write pet_lastAction) -->
-  <script>
-/* Integration layer — persistence, audio SFX, and 3 particle effects.
-   Also writes pet_lastAction to localStorage on every user action (source:'index'). */
-(function(){
-  if (!(typeof window.feedPet === 'function' && typeof window.petPet === 'function' && typeof window.sendKiss === 'function')) {
-    console.warn('Integration skipped: original functions not found.');
-    return;
-  }
-
-  const STORAGE_KEY = 'petState_v2';
-  const lastEl = document.getElementById('last-interaction');
-  const themeBtn = document.getElementById('themeToggle');
-  const confCanvas = document.getElementById('confettiCanvas');
-  const cctx = confCanvas && confCanvas.getContext ? confCanvas.getContext('2d') : null;
-
-  // Use the actual global `health` variable if present; fallback to 100
-  const state = {
-    health: (typeof health === 'number') ? health : 100,
-    lastInteraction: localStorage.getItem('pet_lastInteraction') || null,
-    theme: localStorage.getItem('pet_theme') || 'light'
-  };
-
-  // AUDIO SETUP — uses your existing filenames (place files in same folder or adjust paths)
-  const sFeed = new Audio('sfxeat.mp3.wav');   // feed
-  const sPet  = new Audio('sfxpurr.mp3.wav');  // pet / cute human-like
-  const sKiss = new Audio('sfxkiss.mp3.wav');  // kiss
-
-  [sFeed, sPet, sKiss].forEach(a => { a.preload = 'auto'; a.volume = 0.9; });
-
-  function playSFX(audio){
-    try {
-      audio.currentTime = 0;
-      audio.play().catch(()=>{});
-    } catch(e){}
-  }
-
-  // Resize canvas properly
-  function resizeCanvas(){
-    if(!cctx || !confCanvas) return;
-    confCanvas.width = window.innerWidth;
-    confCanvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
-
-  // Apply theme
-  function applyTheme(t){
-    document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
-    if (themeBtn) themeBtn.textContent = (t === 'dark') ? '☀️' : '🌙';
-    localStorage.setItem('pet_theme', t);
-    state.theme = t;
-  }
-  applyTheme(state.theme);
-
-  // Save minimal state (always read from real `health` variable)
-  function saveState(){
-    try {
-      if (typeof health === 'number') state.health = health;
-      const payload = { health: state.health, lastInteraction: state.lastInteraction, theme: state.theme };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      localStorage.setItem('pet_lastInteraction', state.lastInteraction || '');
-    } catch(e) {
-      console.warn('saveState error', e);
-    }
-  }
-
-  // Load saved state and apply to real `health`
-  (function loadStored(){
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw || '{}');
-      if (typeof parsed.health === 'number') {
-        state.health = parsed.health;
-        try { health = state.health; } catch(e){}
-        try { window.health = state.health; } catch(e){}
-        const hb = document.getElementById('health-bar');
-        if (hb) { hb.style.width = `${state.health}%`; hb.textContent = `${state.health}% Mood Titew`; }
-      }
-      if (parsed.lastInteraction) {
-        state.lastInteraction = parsed.lastInteraction;
-        if (lastEl) lastEl.textContent = 'Last: ' + new Date(parsed.lastInteraction).toLocaleString();
-      } else {
-        if (lastEl) lastEl.textContent = 'Last: -';
-      }
-      if (parsed.theme) applyTheme(parsed.theme);
-    } catch(e){
-      console.warn('loadStored error', e);
-    }
-  })();
-
-  // Update lastInteraction helper
-  function updateLastInteraction() {
-    state.lastInteraction = new Date().toISOString();
-    if (lastEl) lastEl.textContent = 'Last: ' + new Date(state.lastInteraction).toLocaleString();
-    saveState();
-  }
-
-  // ----------------------------
-  // Particle / effect functions
-  // ----------------------------
-  function heartBurst(x = window.innerWidth/2, y = window.innerHeight/3){
-    if (!cctx) return;
-    const hearts = [];
-    const colors = ['#ff4f8b', '#ff8bb3', '#ff6fa1', '#ff2d6f'];
-    for (let i = 0; i < 18; i++) {
-      hearts.push({
-        x, y,
-        vx: (Math.random() - 0.5) * 6,
-        vy: -Math.random() * 6 - 2,
-        size: 8 + Math.random() * 14,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        life: 50 + Math.floor(Math.random() * 30),
-        rot: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random()-0.5)*0.08
-      });
-    }
-
-    let t = 0;
-    const anim = setInterval(() => {
-      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      hearts.forEach(h => {
-        h.x += h.vx;
-        h.y += h.vy;
-        h.vy += 0.18;
-        h.rot += h.rotSpeed;
-        h.life--;
-        const s = h.size;
-        cctx.save();
-        cctx.translate(h.x, h.y);
-        cctx.rotate(h.rot);
-        cctx.fillStyle = h.color;
-        cctx.beginPath();
-        cctx.moveTo(0, -s*0.6);
-        cctx.bezierCurveTo(-s, -s*1.3, -s*1.2, s*0.2, 0, s);
-        cctx.bezierCurveTo(s*1.2, s*0.2, s, -s*1.3, 0, -s*0.6);
-        cctx.closePath();
-        cctx.fill();
-        cctx.restore();
-      });
-      t++;
-      if (hearts.every(h => h.life <= 0) || t > 120) {
-        clearInterval(anim);
-        cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      }
-    }, 16);
-  }
-
-  function foodBurst(x = window.innerWidth/2, y = window.innerHeight/3){
-    if (!cctx) return;
-    const foods = ["🍔", "🍟", "🍕"];
-    const parts = [];
-    for (let i = 0; i < 14; i++) {
-      parts.push({
-        x, y,
-        vx: (Math.random() - 0.5) * 8,
-        vy: -Math.random() * 6 - 2,
-        size: 20 + Math.random() * 22,
-        emoji: foods[Math.floor(Math.random() * foods.length)],
-        life: 40 + Math.random() * 30,
-        rot: (Math.random()-0.5)*0.6
-      });
-    }
-    let t = 0;
-    const anim = setInterval(() => {
-      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      parts.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.25;
-        p.rot += 0.02;
-        p.life--;
-        cctx.save();
-        cctx.translate(p.x, p.y);
-        cctx.rotate(p.rot);
-        cctx.font = `${p.size}px serif`;
-        cctx.textAlign = 'center';
-        cctx.textBaseline = 'middle';
-        cctx.fillText(p.emoji, 0, 0);
-        cctx.restore();
-      });
-      t++;
-      if (parts.every(p => p.life <= 0) || t > 120) {
-        clearInterval(anim);
-        cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      }
-    }, 16);
-  }
-
-  function sparkleBurst(x = window.innerWidth/2, y = window.innerHeight/3){
-    if (!cctx) return;
-    const parts = [];
-    const colors = ['#ffffff', '#ffe6f2', '#ff8ccd'];
-    for (let i = 0; i < 28; i++) {
-      parts.push({
-        x, y,
-        vx: (Math.random() - 0.5) * 5,
-        vy: (Math.random() - 0.5) * 5 - 1,
-        size: 1 + Math.random() * 5,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        life: 30 + Math.random() * 30,
-        glow: 0.6 + Math.random()*0.8
-      });
-    }
-    let t = 0;
-    const anim = setInterval(() => {
-      cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      parts.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.03;
-        p.life--;
-        const g = cctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size*3);
-        g.addColorStop(0, p.color);
-        g.addColorStop(0.6, p.color);
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        cctx.globalAlpha = Math.max(0, p.life/50);
-        cctx.fillStyle = g;
-        cctx.beginPath();
-        cctx.arc(p.x, p.y, p.size*2.2, 0, Math.PI*2);
-        cctx.fill();
-        cctx.globalAlpha = 1;
-      });
-      t++;
-      if (parts.every(p => p.life <= 0) || t > 120) {
-        clearInterval(anim);
-        cctx.clearRect(0,0,confCanvas.width,confCanvas.height);
-      }
-    }, 16);
-  }
-
-  // ----------------------------
-  // Preserve originals and wrap them (no changes inside original functions)
-  // ----------------------------
-  const origFeed = window.feedPet.bind(window);
-  const origPet  = window.petPet.bind(window);
-  const origKiss = window.sendKiss.bind(window);
-
-  window.feedPet = function(...args){
-    origFeed(...args);
-    // sync from real health variable to state
-    if (typeof health === 'number') state.health = health;
-    // play sfx
-    playSFX(sFeed);
-    // show food burst around avatar center
-    const rect = petDisplay.getBoundingClientRect();
-    foodBurst(rect.left + rect.width/2, rect.top + rect.height/2);
-
-    // write minimal entry so dev.html can pick it up (source: 'index')
-    try {
-      localStorage.setItem('pet_lastAction', JSON.stringify({
-        source: 'index',
-        action: 'feedPet',
-        amount: 15,
-        ts: new Date().toISOString()
-      }));
-    } catch(e){}
-
-    updateLastInteraction();
-    saveState();
-  };
-
-  window.petPet = function(...args){
-    origPet(...args);
-    if (typeof health === 'number') state.health = health;
-    playSFX(sPet);
-    const rect = petDisplay.getBoundingClientRect();
-    sparkleBurst(rect.left + rect.width/2, rect.top + rect.height/2);
-
-    try {
-      localStorage.setItem('pet_lastAction', JSON.stringify({
-        source: 'index',
-        action: 'petPet',
-        amount: 10,
-        ts: new Date().toISOString()
-      }));
-    } catch(e){}
-
-    updateLastInteraction();
-    saveState();
-  };
-
-  window.sendKiss = function(...args){
-    origKiss(...args);
-    if (typeof health === 'number') state.health = health;
-    playSFX(sKiss);
-    const rect = petDisplay.getBoundingClientRect();
-    heartBurst(rect.left + rect.width/2, rect.top + rect.height/2 - 10);
-
-    try {
-      localStorage.setItem('pet_lastAction', JSON.stringify({
-        source: 'index',
-        action: 'sendKiss',
-        amount: 5,
-        ts: new Date().toISOString()
-      }));
-    } catch(e){}
-
-    updateLastInteraction();
-    saveState();
-  };
-
-  // theme toggle button event
-  if (themeBtn) {
-    themeBtn.addEventListener('click', ()=> {
-      const next = (state.theme === 'dark') ? 'light' : 'dark';
-      applyTheme(next);
-      saveState();
-    });
-  }
-
-  // ensure save periodically as fallback
-  setInterval(saveState, 5000);
-  window.addEventListener('beforeunload', saveState);
-
-  // initial save to ensure storage keys exist
-  saveState();
-
-})();
-  </script>
-
-    <script>
-// Generate atau load deviceId
+<script>
+// deviceId
 (function(){
   const KEY = 'pet_deviceId';
   let id = localStorage.getItem(KEY);
-  if (!id) {
-    // auto-generate ID unik
-    id = 'dev-' + Math.random().toString(36).substring(2,10) + Date.now().toString(36);
-    localStorage.setItem(KEY, id);
+  if(!id){
+    id = "dev-" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+    localStorage.setItem(KEY,id);
   }
   window.deviceId = id;
-  console.log("deviceId:", id);
 })();
 </script>
 
-    <!-- Firebase SDKs -->
+<!-- Firebase -->
 <script type="module">
-  // Import
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  // Config dari Firebase awak
   const firebaseConfig = {
     apiKey: "AIzaSyDH0xKiNZ_f2opGL18pbZ-7xLt9pTS-9k8",
     authDomain: "anep-s-booster.firebaseapp.com",
@@ -628,68 +234,41 @@
     databaseURL: "https://anep-s-booster-default-rtdb.asia-southeast1.firebasedatabase.app/"
   };
 
-  // Start Firebase
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  console.log("Firebase ready.");
-
-  // Write Log Function
-  window.writeLog = function(actionName){
-      if (!window.deviceId){
-        console.error("Missing deviceId");
-        return;
-      }
-
-      const node = ref(db, "logs/" + window.deviceId);
-
-      const entry = {
-        action: actionName,
-        ts: Date.now()
-      };
-
-      push(node, entry)
-        .then(() => console.log("Firebase Log OK:", entry))
-        .catch((e) => console.error("Firebase Log ERROR:", e));
+  window.writeLog = function(action){
+    push(ref(db,"logs/"+window.deviceId),{
+      action:action,
+      ts:Date.now()
+    }).then(()=>{
+      console.log("Firebase Log OK:", action);
+    }).catch(e=>{
+      console.error("Firebase Log ERROR:",e);
+    });
   };
 
-</script>
+  // ACTION HOOKS
+  const f = window.feedPet;
+  const p = window.petPet;
+  const k = window.sendKiss;
 
-    <script>
-// === Firebase Action Hooks (tidak kacau code lain) ===
-
-// Pastikan writeLog wujud dari Firebase section
-if (typeof window.writeLog === "function") {
-
-  // Simpan original handler
-  const _origFeed = window.feedPet;
-  const _origPet  = window.petPet;
-  const _origKiss = window.sendKiss;
-
-  // Override function supaya tulis log → Firebase
   window.feedPet = function(...a){
-      _origFeed(...a);    // kekalkan behaviour sedia ada
-      writeLog("feedPet");
+    f(...a);
+    writeLog("feedPet");
   };
 
   window.petPet = function(...a){
-      _origPet(...a);
-      writeLog("petPet");
+    p(...a);
+    writeLog("petPet");
   };
 
   window.sendKiss = function(...a){
-      _origKiss(...a);
-      writeLog("sendKiss");
+    k(...a);
+    writeLog("sendKiss");
   };
 
-  console.log("Firebase action hooks ready.");
-}
 </script>
 
 </body>
 </html>
-
-
-
-
-
