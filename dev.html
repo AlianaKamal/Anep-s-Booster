@@ -413,7 +413,48 @@ changeImage('ratna_normal.png');
 })();
 </script>
 
+  <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDH0xKiNZ_f2opGL18pbZ-7xLt9pTS-9k8",
+  authDomain: "anep-s-booster.firebaseapp.com",
+  projectId: "anep-s-booster",
+  storageBucket: "anep-s-booster.firebasestorage.app",
+  messagingSenderId: "349506408528",
+  appId: "1:349506408528:web:a049a1097c55595212c155",
+  databaseURL: "https://anep-s-booster-default-rtdb.asia-southeast1.firebasedatabase.app/"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const BF_DEVICE_ID = "dev-yp3q3582mit2fgp0"; // ❗ AWAK SET SINI
+
+const logBox = document.getElementById("log");
+
+const node = ref(db, "logs/" + BF_DEVICE_ID);
+
+onValue(node, (snap)=>{
+   const data = snap.val();
+   if (!data){
+     logBox.textContent = "(BF belum tekan apa-apa)";
+     return;
+   }
+
+   let text = "";
+   Object.values(data).sort((a,b)=>b.ts-a.ts).forEach(item=>{
+      const time = new Date(item.ts).toLocaleString();
+      text += `${time} — ${item.action}\n`;
+   });
+
+   logBox.textContent = text;
+});
+</script>
+
 
 </body>
 </html>
+
 
